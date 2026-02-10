@@ -20,7 +20,7 @@ stack_base                                  ; This label is 'just after' the sta
                 align
 
 START
-    CALL CLEAR
+    call CLEAR
 
     ;LI a0, LETTER_A 
     LA a1, str
@@ -76,54 +76,48 @@ J END
 
 WAIT_LCD_IDLE
     ; Set to read control with data bus direction as input
-    LI a2, 0b1001 ;1001
+    LI a2, 0b1001
     LI t0, LCD_DATA
     SB a2, 1[t0]
 
+
 STEP_2
     ; Enable signal 1
-    LI a2, 0b1101 ;1101
+    LI a2, 0b1101
     LI t0, LCD_DATA
     SB a2, 1[t0]
+
 
     ; Delay to stretch pulse
     subi sp, sp, 0x4
     sw ra, [sp]
 
-    subi sp, sp, 0x4
-    sw t0, [sp]
-
     call waiting_loop
-
-    lw t0, [sp]
-    addi sp, sp, 0x4
 
     lw ra, [sp]
     addi sp, sp, 0x4
+
 
     ; Read LCD status byte
     LI t3, LCD_DATA
     LW a3, [t3]
 
+
     ; Enable signal 0
-    LI a2, 0x9 ; 1001
+    LI a2, 0x9
     LI t0, LCD_DATA
     SB a2, 1[t0]
+
 
     ; Delay to separate enable pulses
     subi sp, sp, 0x4
     sw ra, [sp]
 
-    subi sp, sp, 0x4
-    sw t0, [sp]
-
     call waiting_loop
-
-    lw t0, [sp]
-    addi sp, sp, 0x4
 
     lw ra, [sp]
     addi sp, sp, 0x4
+
 
     ; If bit 7 high repeat from step 2
     LI a4, 0x80
@@ -131,11 +125,13 @@ STEP_2
     BNEZ a3, STEP_2
 
 
-WRITE_CHARACTER
+
+; def writeCharacter (character)
+writeCharacter
     ; Called with function argument a0
 
     ; Set to write data with data bus direction as output
-    LI a2, 0b1010 ; 1010
+    LI a2, 0b1010
     LI t0, LCD_DATA
     SB a2, 1[t0]
 
@@ -143,7 +139,7 @@ WRITE_CHARACTER
     SW a0, LCD_DATA, t0
 
     ; Enable signal 1
-    LI a2, 0b1110 ; 1110
+    LI a2, 0b1110
     LI t0, LCD_DATA
     SB a2, 1[t0]
 
@@ -151,19 +147,13 @@ WRITE_CHARACTER
     subi sp, sp, 0x4
     sw ra, [sp]
 
-    subi sp, sp, 0x4
-    sw t0, [sp]
-
     call waiting_loop
-
-    lw t0, [sp]
-    addi sp, sp, 0x4
 
     lw ra, [sp]
     addi sp, sp, 0x4
 
     ; Disable signal 0
-    LI a2, 0b1010 ; 1010
+    LI a2, 0b1010
     LI t0, LCD_DATA
     SB a2, 1[t0]
 
@@ -185,13 +175,7 @@ STEP_22
     subi sp, sp, 0x4
     sw ra, [sp]
 
-    subi sp, sp, 0x4
-    sw t0, [sp]
-
     call waiting_loop
-
-    lw t0, [sp]
-    addi sp, sp, 0x4
 
     lw ra, [sp]
     addi sp, sp, 0x4
@@ -209,13 +193,7 @@ STEP_22
     subi sp, sp, 0x4
     sw ra, [sp]
 
-    subi sp, sp, 0x4
-    sw t0, [sp]
-
     call waiting_loop
-
-    lw t0, [sp]
-    addi sp, sp, 0x4
 
     lw ra, [sp]
     addi sp, sp, 0x4
@@ -246,13 +224,7 @@ STEP_22
     subi sp, sp, 0x4
     sw ra, [sp]
 
-    subi sp, sp, 0x4
-    sw t0, [sp]
-
     call waiting_loop
-
-    lw t0, [sp]
-    addi sp, sp, 0x4
 
     lw ra, [sp]
     addi sp, sp, 0x4
