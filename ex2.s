@@ -1,3 +1,24 @@
+; Exercise 3
+
+; Define names to aid readability
+
+
+                la      sp, stack_base      ; Set sp pointing to the end of our stack
+                j       START
+
+LCD_DATA        EQU     0x0001_0100
+LCD_CONTROL     EQU     0x0001_0101
+MASK_BIT7       EQU     0x0000_0000
+CLEAR_DB        EQU     0b0000_0001
+DELAY           EQU     0x089690
+
+str             defb    "Hello world!\0"    ; String that we want to print
+                align
+
+stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be used for the stack
+stack_base                                  ; This label is 'just after' the stack base - FULL DESCENDING
+                align
+
 START
     CALL CLEAR
 
@@ -51,8 +72,7 @@ START
     LB a0, [a1]
     CALL WAIT_LCD_IDLE
 
-
-JAL END
+J END
 
 WAIT_LCD_IDLE
     ; Set to read control with data bus direction as input
@@ -67,10 +87,19 @@ STEP_2
     SB a2, 1[t0]
 
     ; Delay to stretch pulse
-    LI a2, 0x989690
-LOOP_SUBS1
-    SUBI a2, a2, 0x1 
-    BNE a2, zero, LOOP_SUBS1
+    subi sp, sp, 0x4
+    sw ra, [sp]
+
+    subi sp, sp, 0x4
+    sw t0, [sp]
+
+    call waiting_loop
+
+    lw t0, [sp]
+    addi sp, sp, 0x4
+
+    lw ra, [sp]
+    addi sp, sp, 0x4
 
     ; Read LCD status byte
     LI t3, LCD_DATA
@@ -82,10 +111,19 @@ LOOP_SUBS1
     SB a2, 1[t0]
 
     ; Delay to separate enable pulses
-    LI a2, 0x989690
-LOOP_SUBS2
-    SUBI a2, a2, 0x1 
-    BNE a2, zero, LOOP_SUBS2
+    subi sp, sp, 0x4
+    sw ra, [sp]
+
+    subi sp, sp, 0x4
+    sw t0, [sp]
+
+    call waiting_loop
+
+    lw t0, [sp]
+    addi sp, sp, 0x4
+
+    lw ra, [sp]
+    addi sp, sp, 0x4
 
     ; If bit 7 high repeat from step 2
     LI a4, 0x80
@@ -110,10 +148,19 @@ WRITE_CHARACTER
     SB a2, 1[t0]
 
     ; Delay to stretch pulse
-    LI a2, 0x989690
-LOOP_SUBS3
-    SUBI a2, a2, 0x1 
-    BNE a2, zero, LOOP_SUBS3
+    subi sp, sp, 0x4
+    sw ra, [sp]
+
+    subi sp, sp, 0x4
+    sw t0, [sp]
+
+    call waiting_loop
+
+    lw t0, [sp]
+    addi sp, sp, 0x4
+
+    lw ra, [sp]
+    addi sp, sp, 0x4
 
     ; Disable signal 0
     LI a2, 0b1010 ; 1010
@@ -135,10 +182,19 @@ STEP_22
     SB a2, 1[t0]
 
     ; Delay to stretch pulse
-    LI a2, 0x989690
-LOOP_SUBS4
-    SUBI a2, a2, 0x1 
-    BNE a2, zero, LOOP_SUBS4
+    subi sp, sp, 0x4
+    sw ra, [sp]
+
+    subi sp, sp, 0x4
+    sw t0, [sp]
+
+    call waiting_loop
+
+    lw t0, [sp]
+    addi sp, sp, 0x4
+
+    lw ra, [sp]
+    addi sp, sp, 0x4
 
     ; Read LCD status byte
     LI t3, LCD_DATA
@@ -150,10 +206,19 @@ LOOP_SUBS4
     SB a2, 1[t0]
 
     ; Delay to separate enable pulses
-    LI a2, 0x989690
-LOOP_SUBS5
-    SUBI a2, a2, 0x1 
-    BNE a2, zero, LOOP_SUBS5
+    subi sp, sp, 0x4
+    sw ra, [sp]
+
+    subi sp, sp, 0x4
+    sw t0, [sp]
+
+    call waiting_loop
+
+    lw t0, [sp]
+    addi sp, sp, 0x4
+
+    lw ra, [sp]
+    addi sp, sp, 0x4
 
     ; If bit 7 high repeat from step 2
     LI a4, 0x80
@@ -178,25 +243,33 @@ LOOP_SUBS5
     SB a2, 1[t0]
 
     ; Delay to stretch pulse
-    LI a2, 0x989690
-LOOP_SUBS6
-    SUBI a2, a2, 0x1 
-    BNE a2, zero, LOOP_SUBS6
+    subi sp, sp, 0x4
+    sw ra, [sp]
+
+    subi sp, sp, 0x4
+    sw t0, [sp]
+
+    call waiting_loop
+
+    lw t0, [sp]
+    addi sp, sp, 0x4
+
+    lw ra, [sp]
+    addi sp, sp, 0x4
 
     ; Disable signal 0
     LI a2, 0b1000 ; 1000
     LI t0, LCD_DATA
     SB a2, 1[t0]
 
-    RET
+    jr  ra
+
+
+waiting_loop
+    li t0, DELAY
+loop_point
+    subi t0, t0, 0b1
+    bne t0, zero, loop_point
+    jr  ra
 
 END
-
-LCD_DATA    EQU 0x0001_0100
-LCD_CONTROL EQU 0x0001_0101
-MASK_BIT7   EQU 0x0000_0000
-
-str defb "Hello world!\0"
-align
-LETTER_A    EQU 'h'
-CLEAR_DB    EQU 0b0000_0001
