@@ -22,55 +22,19 @@ stack_base                                  ; This label is 'just after' the sta
 START
     call CLEAR
 
-    ;LI a0, LETTER_A 
     LA a7, str
     LB a0, [a7]
 
     CALL writeCharacter
 
-    ADDI a7, a7, 0b1
+notEnded
+    addi a7, a7, 1
     LB a0, [a7]
+    BEQZ a0, foundNull
     CALL writeCharacter
+    J notEnded
 
-    ADDI a7, a7, 0b1
-    LB a0, [a7]
-    CALL writeCharacter
-
-    ADDI a7, a7, 0b1
-    LB a0, [a7]
-    CALL writeCharacter
-
-    ADDI a7, a7, 0b1
-    LB a0, [a7]
-    CALL writeCharacter
-
-    ADDI a7, a7, 0b1
-    LB a0, [a7]
-    CALL writeCharacter
-
-    ADDI a7, a7, 0b1
-    LB a0, [a7]
-    CALL writeCharacter
-
-    ADDI a7, a7, 0b1
-    LB a0, [a7]
-    CALL writeCharacter
-
-    ADDI a7, a7, 0b1
-    LB a0, [a7]
-    CALL writeCharacter
-
-    ADDI a7, a7, 0b1
-    LB a0, [a7]
-    CALL writeCharacter
-
-    ADDI a7, a7, 0b1
-    LB a0, [a7]
-    CALL writeCharacter
-
-    ADDI a7, a7, 0b1
-    LB a0, [a7]
-    CALL writeCharacter
+foundNull
 
 J END
 

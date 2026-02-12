@@ -27,222 +27,185 @@ KMD
 00000080:             ;                 align
 00000080:             ; 
 00000080:             ; START
-00000080: 170000EF    ;     call CLEAR
+00000080: 100000EF    ;     call CLEAR
 00000084:             ; 
-00000084:             ;     ;LI a0, LETTER_A 
 00000084: 00000897    ;     LA a7, str
 00000088: F8888893    ; 
 0000008C: 00088503    ;     LB a0, [a7]
 00000090:             ; 
-00000090: 0FC000EF    ;     CALL writeCharacter
+00000090: 08C000EF    ;     CALL writeCharacter
 00000094:             ; 
-00000094: 00188893    ;     ADDI a7, a7, 0b1
+00000094:             ; notEnded
+00000094: 00188893    ;     addi a7, a7, 1
 00000098: 00088503    ;     LB a0, [a7]
-0000009C: 0F0000EF    ;     CALL writeCharacter
-000000A0:             ; 
-000000A0: 00188893    ;     ADDI a7, a7, 0b1
-000000A4: 00088503    ;     LB a0, [a7]
-000000A8: 0E4000EF    ;     CALL writeCharacter
+0000009C: 00050663    ;     BEQZ a0, foundNull
+000000A0: 07C000EF    ;     CALL writeCharacter
+000000A4: FF1FF06F    ;     J notEnded
+000000A8:             ; 
+000000A8:             ; foundNull
+000000A8:             ; 
+000000A8: 1540006F    ; J END
 000000AC:             ; 
-000000AC: 00188893    ;     ADDI a7, a7, 0b1
-000000B0: 00088503    ;     LB a0, [a7]
-000000B4: 0D8000EF    ;     CALL writeCharacter
-000000B8:             ; 
-000000B8: 00188893    ;     ADDI a7, a7, 0b1
-000000BC: 00088503    ;     LB a0, [a7]
-000000C0: 0CC000EF    ;     CALL writeCharacter
-000000C4:             ; 
-000000C4: 00188893    ;     ADDI a7, a7, 0b1
-000000C8: 00088503    ;     LB a0, [a7]
-000000CC: 0C0000EF    ;     CALL writeCharacter
-000000D0:             ; 
-000000D0: 00188893    ;     ADDI a7, a7, 0b1
-000000D4: 00088503    ;     LB a0, [a7]
-000000D8: 0B4000EF    ;     CALL writeCharacter
+000000AC:             ; ; def waitLcdIdle()
+000000AC:             ; 
+000000AC:             ; ; local variables
+000000AC:             ; ; s0 = LCD_DATA
+000000AC:             ; ; s1 = Enable on
+000000AC:             ; ; s2 = Enable off
+000000AC:             ; ; s3 = bit mask
+000000AC:             ; ; s4 = status byte
+000000AC:             ; 
+000000AC:             ; waitLcdIdle
+000000AC:             ;     ; save ra and s registers
+000000AC: FE810113    ;     subi    sp, sp, 24
+000000B0: 00112A23    ;     sw      ra, 20[sp]
+000000B4: 00812823    ;     sw      s0, 16[sp]
+000000B8: 00912623    ;     sw      s1, 12[sp]
+000000BC: 01212423    ;     sw      s2,  8[sp]
+000000C0: 01312223    ;     sw      s3,  4[sp]
+000000C4: 01412023    ;     sw      s4,  0[sp]
+000000C8:             ; 
+000000C8: 00010437    ;     li s0, LCD_DATA
+000000CC: 10040413    ; 
+000000D0: 00D00493    ;     li s1, 0b1101       ; E=1
+000000D4: 00900913    ;     li s2, 0b1001       ; E=0
+000000D8: 08000993    ;     li s3, 0x80         ; bit 7 mask
 000000DC:             ; 
-000000DC: 00188893    ;     ADDI a7, a7, 0b1
-000000E0: 00088503    ;     LB a0, [a7]
-000000E4: 0A8000EF    ;     CALL writeCharacter
+000000DC:             ;     ; Set to read control with data bus direction as input
+000000DC: 012400A3    ;     SB s2, 1[s0]
+000000E0:             ; 
+000000E0:             ; STEP_2
+000000E0:             ;     ; Enable signal 1
+000000E0: 009400A3    ;     SB s1, 1[s0]
+000000E4:             ; 
+000000E4:             ;     ; Delay to stretch pulse
+000000E4: 104000EF    ;     call waiting_loop
 000000E8:             ; 
-000000E8: 00188893    ;     ADDI a7, a7, 0b1
-000000EC: 00088503    ;     LB a0, [a7]
-000000F0: 09C000EF    ;     CALL writeCharacter
+000000E8:             ;     ; Read LCD status byte
+000000E8: 00042A03    ;     LW s4, [s0]
+000000EC:             ; 
+000000EC:             ;     ; Enable signal 0
+000000EC: 012400A3    ;     SB s2, 1[s0]
+000000F0:             ; 
+000000F0:             ;     ; Delay to separate enable pulses
+000000F0: 0F8000EF    ;     call waiting_loop
 000000F4:             ; 
-000000F4: 00188893    ;     ADDI a7, a7, 0b1
-000000F8: 00088503    ;     LB a0, [a7]
-000000FC: 090000EF    ;     CALL writeCharacter
-00000100:             ; 
-00000100: 00188893    ;     ADDI a7, a7, 0b1
-00000104: 00088503    ;     LB a0, [a7]
-00000108: 084000EF    ;     CALL writeCharacter
-0000010C:             ; 
-0000010C: 00188893    ;     ADDI a7, a7, 0b1
-00000110: 00088503    ;     LB a0, [a7]
-00000114: 078000EF    ;     CALL writeCharacter
+000000F4:             ;     ; If bit 7 high repeat from step 2
+000000F4: 013A7A33    ;     AND s4, s4, s3
+000000F8: FE0A14E3    ;     BNEZ s4, STEP_2
+000000FC:             ; 
+000000FC:             ;     ; Getting ra back
+000000FC: 00012A03    ;     lw      s4,  0[sp]
+00000100: 00412983    ;     lw      s3,  4[sp]
+00000104: 00812903    ;     lw      s2,  8[sp]
+00000108: 00C12483    ;     lw      s1, 12[sp]
+0000010C: 01012403    ;     lw      s0, 16[sp]
+00000110: 01412083    ;     lw      ra, 20[sp]
+00000114: 01810113    ;     addi    sp, sp, 24
 00000118:             ; 
-00000118: 1540006F    ; J END
+00000118: 00008067    ;     ret
 0000011C:             ; 
-0000011C:             ; ; def waitLcdIdle()
 0000011C:             ; 
-0000011C:             ; ; local variables
-0000011C:             ; ; s0 = LCD_DATA
-0000011C:             ; ; s1 = Enable on
-0000011C:             ; ; s2 = Enable off
-0000011C:             ; ; s3 = bit mask
-0000011C:             ; ; s4 = status byte
+0000011C:             ; ; def writeCharacter (character - a0)
+0000011C:             ; writeCharacter
 0000011C:             ; 
-0000011C:             ; waitLcdIdle
-0000011C:             ;     ; save ra and s registers
-0000011C: FE810113    ;     subi    sp, sp, 24
-00000120: 00112A23    ;     sw      ra, 20[sp]
-00000124: 00812823    ;     sw      s0, 16[sp]
-00000128: 00912623    ;     sw      s1, 12[sp]
-0000012C: 01212423    ;     sw      s2,  8[sp]
-00000130: 01312223    ;     sw      s3,  4[sp]
-00000134: 01412023    ;     sw      s4,  0[sp]
+0000011C: FFC10113    ;     subi    sp, sp, 4
+00000120: 00112023    ;     sw      ra, 0[sp]
+00000124:             ; 
+00000124: F89FF0EF    ;     call waitLcdIdle
+00000128:             ; 
+00000128:             ;     ; Set to write data with data bus direction as output
+00000128: 00A00613    ;     LI a2, 0b1010
+0000012C: 000102B7    ;     LI t0, LCD_DATA
+00000130: 10028293    ; 
+00000134: 00C280A3    ;     SB a2, 1[t0]
 00000138:             ; 
-00000138: 00010437    ;     li s0, LCD_DATA
-0000013C: 10040413    ; 
-00000140: 00D00493    ;     li s1, 0b1101       ; E=1
-00000144: 00900913    ;     li s2, 0b1001       ; E=0
-00000148: 08000993    ;     li s3, 0x80         ; bit 7 mask
-0000014C:             ; 
-0000014C:             ;     ; Set to read control with data bus direction as input
-0000014C: 012400A3    ;     SB s2, 1[s0]
+00000138:             ;     ; Output desired byte
+00000138: 00010297    ;     SW a0, LCD_DATA, t0
+0000013C: FCA2A423    ; 
+00000140:             ; 
+00000140:             ;     ; Enable signal 1
+00000140: 00E00613    ;     LI a2, 0b1110
+00000144: 000102B7    ;     LI t0, LCD_DATA
+00000148: 10028293    ; 
+0000014C: 00C280A3    ;     SB a2, 1[t0]
 00000150:             ; 
-00000150:             ; STEP_2
-00000150:             ;     ; Enable signal 1
-00000150: 009400A3    ;     SB s1, 1[s0]
-00000154:             ; 
-00000154:             ;     ; Delay to stretch pulse
-00000154: 104000EF    ;     call waiting_loop
+00000150:             ;     ; Delay to stretch pulse
+00000150: FFC10113    ;     subi sp, sp, 0x4
+00000154: 00112023    ;     sw ra, [sp]
 00000158:             ; 
-00000158:             ;     ; Read LCD status byte
-00000158: 00042A03    ;     LW s4, [s0]
+00000158: 090000EF    ;     call waiting_loop
 0000015C:             ; 
-0000015C:             ;     ; Enable signal 0
-0000015C: 012400A3    ;     SB s2, 1[s0]
-00000160:             ; 
-00000160:             ;     ; Delay to separate enable pulses
-00000160: 0F8000EF    ;     call waiting_loop
+0000015C: 00012083    ;     lw ra, [sp]
+00000160: 00410113    ;     addi sp, sp, 0x4
 00000164:             ; 
-00000164:             ;     ; If bit 7 high repeat from step 2
-00000164: 013A7A33    ;     AND s4, s4, s3
-00000168: FE0A14E3    ;     BNEZ s4, STEP_2
-0000016C:             ; 
-0000016C:             ;     ; Getting ra back
-0000016C: 00012A03    ;     lw      s4,  0[sp]
-00000170: 00412983    ;     lw      s3,  4[sp]
-00000174: 00812903    ;     lw      s2,  8[sp]
-00000178: 00C12483    ;     lw      s1, 12[sp]
-0000017C: 01012403    ;     lw      s0, 16[sp]
-00000180: 01412083    ;     lw      ra, 20[sp]
-00000184: 01810113    ;     addi    sp, sp, 24
+00000164:             ;     ; Disable signal 0
+00000164: 00A00613    ;     LI a2, 0b1010
+00000168: 000102B7    ;     LI t0, LCD_DATA
+0000016C: 10028293    ; 
+00000170: 00C280A3    ;     SB a2, 1[t0]
+00000174:             ; 
+00000174: 00012083    ;     lw      ra, 0[sp]
+00000178: 00410113    ;     addi    sp, sp, 4
+0000017C:             ; 
+0000017C: 00008067    ;     RET
+00000180:             ; 
+00000180:             ; CLEAR
+00000180:             ; 
+00000180: FFC10113    ;     subi    sp, sp, 4
+00000184: 00112023    ;     sw      ra, 0[sp]
 00000188:             ; 
-00000188: 00008067    ;     ret
+00000188: F25FF0EF    ;     call waitLcdIdle
 0000018C:             ; 
-0000018C:             ; 
-0000018C:             ; ; def writeCharacter (character - a0)
-0000018C:             ; writeCharacter
-0000018C:             ; 
-0000018C: FFC10113    ;     subi    sp, sp, 4
-00000190: 00112023    ;     sw      ra, 0[sp]
-00000194:             ; 
-00000194: F89FF0EF    ;     call waitLcdIdle
-00000198:             ; 
-00000198:             ;     ; Set to write data with data bus direction as output
-00000198: 00A00613    ;     LI a2, 0b1010
-0000019C: 000102B7    ;     LI t0, LCD_DATA
-000001A0: 10028293    ; 
-000001A4: 00C280A3    ;     SB a2, 1[t0]
+0000018C:             ;     ; DB CODE
+0000018C: 00100513    ;     LI a0, CLEAR_DB
+00000190:             ; 
+00000190:             ;     ; RS = 0, R/W = 0, E = 0
+00000190: 00800613    ;     LI a2, 0b1000 ; 1000
+00000194: 000102B7    ;     LI t0, LCD_DATA
+00000198: 10028293    ; 
+0000019C: 00C280A3    ;     SB a2, 1[t0]
+000001A0:             ; 
+000001A0:             ;     ; Output desired byte
+000001A0: 00010297    ;     SW a0, LCD_DATA, t0
+000001A4: F6A2A023    ; 
 000001A8:             ; 
-000001A8:             ;     ; Output desired byte
-000001A8: 00010297    ;     SW a0, LCD_DATA, t0
-000001AC: F4A2AC23    ; 
-000001B0:             ; 
-000001B0:             ;     ; Enable signal 1
-000001B0: 00E00613    ;     LI a2, 0b1110
-000001B4: 000102B7    ;     LI t0, LCD_DATA
-000001B8: 10028293    ; 
-000001BC: 00C280A3    ;     SB a2, 1[t0]
+000001A8:             ;     ; Enable signal 1
+000001A8: 00C00613    ;     LI a2, 0b1100 ; 1100
+000001AC: 000102B7    ;     LI t0, LCD_DATA
+000001B0: 10028293    ; 
+000001B4: 00C280A3    ;     SB a2, 1[t0]
+000001B8:             ; 
+000001B8:             ;     ; Delay to stretch pulse
+000001B8: FFC10113    ;     subi sp, sp, 0x4
+000001BC: 00112023    ;     sw ra, [sp]
 000001C0:             ; 
-000001C0:             ;     ; Delay to stretch pulse
-000001C0: FFC10113    ;     subi sp, sp, 0x4
-000001C4: 00112023    ;     sw ra, [sp]
-000001C8:             ; 
-000001C8: 090000EF    ;     call waiting_loop
+000001C0: 028000EF    ;     call waiting_loop
+000001C4:             ; 
+000001C4: 00012083    ;     lw ra, [sp]
+000001C8: 00410113    ;     addi sp, sp, 0x4
 000001CC:             ; 
-000001CC: 00012083    ;     lw ra, [sp]
-000001D0: 00410113    ;     addi sp, sp, 0x4
-000001D4:             ; 
-000001D4:             ;     ; Disable signal 0
-000001D4: 00A00613    ;     LI a2, 0b1010
-000001D8: 000102B7    ;     LI t0, LCD_DATA
-000001DC: 10028293    ; 
-000001E0: 00C280A3    ;     SB a2, 1[t0]
+000001CC:             ;     ; Disable signal 0
+000001CC: 00800613    ;     LI a2, 0b1000 ; 1000
+000001D0: 000102B7    ;     LI t0, LCD_DATA
+000001D4: 10028293    ; 
+000001D8: 00C280A3    ;     SB a2, 1[t0]
+000001DC:             ; 
+000001DC: 00012083    ;     lw      ra, 0[sp]
+000001E0: 00410113    ;     addi    sp, sp, 4
 000001E4:             ; 
-000001E4: 00012083    ;     lw      ra, 0[sp]
-000001E8: 00410113    ;     addi    sp, sp, 4
-000001EC:             ; 
-000001EC: 00008067    ;     RET
-000001F0:             ; 
-000001F0:             ; CLEAR
-000001F0:             ;    
-000001F0: FFC10113    ;     subi    sp, sp, 4
-000001F4: 00112023    ;     sw      ra, 0[sp]
-000001F8:             ; 
-000001F8: F25FF0EF    ;     call waitLcdIdle
+000001E4: 00008067    ;     jr  ra
+000001E8:             ; 
+000001E8:             ; 
+000001E8:             ; waiting_loop
+000001E8: 000992B7    ;     li t0, DELAY
+000001EC: 69028293    ; 
+000001F0:             ; loop_point
+000001F0: FFF28293    ;     subi t0, t0, 0b1
+000001F4: FE029EE3    ;     bne t0, zero, loop_point
+000001F8: 00008067    ;     jr  ra
 000001FC:             ; 
-000001FC:             ; 
-000001FC:             ;     ; DB CODE
-000001FC: 00100513    ;     LI a0, CLEAR_DB
-00000200:             ; 
-00000200:             ;     ; RS = 0, R/W = 0, E = 0
-00000200: 00800613    ;     LI a2, 0b1000 ; 1000
-00000204: 000102B7    ;     LI t0, LCD_DATA
-00000208: 10028293    ; 
-0000020C: 00C280A3    ;     SB a2, 1[t0]
-00000210:             ; 
-00000210:             ;     ; Output desired byte
-00000210: 00010297    ;     SW a0, LCD_DATA, t0
-00000214: EEA2A823    ; 
-00000218:             ; 
-00000218:             ;     ; Enable signal 1
-00000218: 00C00613    ;     LI a2, 0b1100 ; 1100
-0000021C: 000102B7    ;     LI t0, LCD_DATA
-00000220: 10028293    ; 
-00000224: 00C280A3    ;     SB a2, 1[t0]
-00000228:             ; 
-00000228:             ;     ; Delay to stretch pulse
-00000228: FFC10113    ;     subi sp, sp, 0x4
-0000022C: 00112023    ;     sw ra, [sp]
-00000230:             ; 
-00000230: 028000EF    ;     call waiting_loop
-00000234:             ; 
-00000234: 00012083    ;     lw ra, [sp]
-00000238: 00410113    ;     addi sp, sp, 0x4
-0000023C:             ; 
-0000023C:             ;     ; Disable signal 0
-0000023C: 00800613    ;     LI a2, 0b1000 ; 1000
-00000240: 000102B7    ;     LI t0, LCD_DATA
-00000244: 10028293    ; 
-00000248: 00C280A3    ;     SB a2, 1[t0]
-0000024C:             ; 
-0000024C: 00012083    ;     lw      ra, 0[sp]
-00000250: 00410113    ;     addi    sp, sp, 4
-00000254:             ; 
-00000254: 00008067    ;     jr  ra
-00000258:             ; 
-00000258:             ; 
-00000258:             ; waiting_loop
-00000258: 000992B7    ;     li t0, DELAY
-0000025C: 69028293    ; 
-00000260:             ; loop_point
-00000260: FFF28293    ;     subi t0, t0, 0b1
-00000264: FE029EE3    ;     bne t0, zero, loop_point
-00000268: 00008067    ;     jr  ra
-0000026C:             ; 
-0000026C:             ; END
+000001FC:             ; END
 
 Symbol Table: Labels
 : LCD_DATA                          00010100  Value
@@ -254,10 +217,12 @@ Symbol Table: Labels
 : stack                             0000001C  Label
 : stack_base                        00000080  Label
 : START                             00000080  Label
-: waitLcdIdle                       0000011C  Label
-: STEP_2                            00000150  Label
-: writeCharacter                    0000018C  Label
-: CLEAR                             000001F0  Label
-: waiting_loop                      00000258  Label
-: loop_point                        00000260  Label
-: END                               0000026C  Label
+: notEnded                          00000094  Label
+: foundNull                         000000A8  Label
+: waitLcdIdle                       000000AC  Label
+: STEP_2                            000000E0  Label
+: writeCharacter                    0000011C  Label
+: CLEAR                             00000180  Label
+: waiting_loop                      000001E8  Label
+: loop_point                        000001F0  Label
+: END                               000001FC  Label
