@@ -11,6 +11,7 @@ MASK_BIT7       EQU     0x0000_0000
 CLEAR_DB        EQU     0b0000_0001
 DELAY           EQU     0x099690
 
+; !! Add more strings and a longer wait in between them. !!
 str             defb    "Hello world!\0"    ; String that we want to print
                 align
 
@@ -118,7 +119,8 @@ STEP_2
 
 
 
-; def writeCharacter (char)
+; def writeCharacter (character a0, signals a2)
+; !! Change a1 to s0? !!
 
 ; function arguments
 ; a0 = character to be written
@@ -176,4 +178,7 @@ loop_point
     bne t0, zero, loop_point
     jr  ra
 
-END J .
+
+
+
+END J . ; infinite loop to stop the program
