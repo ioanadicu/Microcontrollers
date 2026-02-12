@@ -1,7 +1,6 @@
 ; Exercise 3
 
-; Define names to aid readability
-
+; Defining names to aid readability
 
                 la      sp, stack_base      ; Set sp pointing to the end of our stack
                 j       START
@@ -18,6 +17,15 @@ str             defb    "Hello world!\0"    ; String that we want to print
 stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be used for the stack
 stack_base                                  ; This label is 'just after' the stack base - FULL DESCENDING
                 align
+
+
+
+
+; def main()
+
+; local variables
+; a7 = pointer to string
+; a0 = character to be written
 
 START
     call CLEAR
@@ -37,6 +45,9 @@ notEnded
 foundNull
 
 J END
+
+
+
 
 ; def waitLcdIdle()
 
@@ -97,6 +108,8 @@ STEP_2
     ret
 
 
+
+
 ; def writeCharacter (char)
 
 ; function arguments
@@ -143,6 +156,9 @@ writeCharacter
 
     RET
 
+
+
+
 CLEAR
 
     subi    sp, sp, 4
@@ -185,6 +201,13 @@ CLEAR
 
     jr  ra
 
+
+
+
+; def waiting_loop
+
+; local variables
+; t0 = takes the delay value
 
 waiting_loop
     li t0, DELAY
