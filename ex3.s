@@ -98,6 +98,11 @@ STEP_2
 
 
 ; def writeCharacter (character - a0)
+
+; local variables
+; s0 = LCD_DATA
+; s1 = Enable 1
+; s2 = Enable 0
 writeCharacter
 
     subi    sp, sp, 4
@@ -119,13 +124,7 @@ writeCharacter
     SB a2, 1[t0]
 
     ; Delay to stretch pulse
-    subi sp, sp, 0x4
-    sw ra, [sp]
-
     call waiting_loop
-
-    lw ra, [sp]
-    addi sp, sp, 0x4
 
     ; Disable signal 0
     LI a2, 0b1010
@@ -187,4 +186,4 @@ loop_point
     bne t0, zero, loop_point
     jr  ra
 
-END
+END J .
