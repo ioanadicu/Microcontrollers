@@ -26,51 +26,51 @@ START
     LA a7, str
     LB a0, [a7]
 
-    CALL waitLcdIdle
+    CALL writeCharacter
 
     ADDI a7, a7, 0b1
     LB a0, [a7]
-    CALL waitLcdIdle
+    CALL writeCharacter
 
     ADDI a7, a7, 0b1
     LB a0, [a7]
-    CALL waitLcdIdle
+    CALL writeCharacter
 
     ADDI a7, a7, 0b1
     LB a0, [a7]
-    CALL waitLcdIdle
+    CALL writeCharacter
 
     ADDI a7, a7, 0b1
     LB a0, [a7]
-    CALL waitLcdIdle
+    CALL writeCharacter
 
     ADDI a7, a7, 0b1
     LB a0, [a7]
-    CALL waitLcdIdle
+    CALL writeCharacter
 
     ADDI a7, a7, 0b1
     LB a0, [a7]
-    CALL waitLcdIdle
+    CALL writeCharacter
 
     ADDI a7, a7, 0b1
     LB a0, [a7]
-    CALL waitLcdIdle
+    CALL writeCharacter
 
     ADDI a7, a7, 0b1
     LB a0, [a7]
-    CALL waitLcdIdle
+    CALL writeCharacter
 
     ADDI a7, a7, 0b1
     LB a0, [a7]
-    CALL waitLcdIdle
+    CALL writeCharacter
 
     ADDI a7, a7, 0b1
     LB a0, [a7]
-    CALL waitLcdIdle
+    CALL writeCharacter
 
     ADDI a7, a7, 0b1
     LB a0, [a7]
-    CALL waitLcdIdle
+    CALL writeCharacter
 
 J END
 
@@ -130,9 +130,17 @@ STEP_2
     lw      ra, 20[sp]
     addi    sp, sp, 24
 
+    ret
+
 
 ; def writeCharacter (character - a0)
 writeCharacter
+
+    subi    sp, sp, 4
+    sw      ra, 0[sp]
+
+    call waitLcdIdle
+
     ; Set to write data with data bus direction as output
     LI a2, 0b1010
     LI t0, LCD_DATA
@@ -160,52 +168,17 @@ writeCharacter
     LI t0, LCD_DATA
     SB a2, 1[t0]
 
+    lw      ra, 0[sp]
+    addi    sp, sp, 4
+
     RET
 
 CLEAR
-    ; Set to read control with data bus direction as input
-    LI a2, 0b1001 ;1001
-    LI t0, LCD_DATA
-    SB a2, 1[t0]
 
-STEP_22
-    ; Enable signal 1
-    LI a2, 0b1101 ;1101
-    LI t0, LCD_DATA
-    SB a2, 1[t0]
+    subi    sp, sp, 4
+    sw      ra, 0[sp]
 
-    ; Delay to stretch pulse
-    subi sp, sp, 0x4
-    sw ra, [sp]
-
-    call waiting_loop
-
-    lw ra, [sp]
-    addi sp, sp, 0x4
-
-    ; Read LCD status byte
-    LI t3, LCD_DATA
-    LW a3, [t3]
-
-    ; Enable signal 0
-    LI a2, 0x9 ; 1001
-    LI t0, LCD_DATA
-    SB a2, 1[t0]
-
-    ; Delay to separate enable pulses
-    subi sp, sp, 0x4
-    sw ra, [sp]
-
-    call waiting_loop
-
-    lw ra, [sp]
-    addi sp, sp, 0x4
-
-    ; If bit 7 high repeat from step 2
-    LI a4, 0x80
-    AND a3, a3, a4
-    BNEZ a3, STEP_22
-
+    call waitLcdIdle
 
     ; DB CODE
     LI a0, CLEAR_DB
@@ -236,6 +209,9 @@ STEP_22
     LI a2, 0b1000 ; 1000
     LI t0, LCD_DATA
     SB a2, 1[t0]
+
+    lw      ra, 0[sp]
+    addi    sp, sp, 4
 
     jr  ra
 
