@@ -97,7 +97,10 @@ STEP_2
     ret
 
 
-; def writeCharacter (character - a0)
+; def writeCharacter (char)
+
+; function arguments
+; a0 = character to be written
 
 ; local variables
 ; s0 = LCD_DATA
@@ -105,34 +108,38 @@ STEP_2
 ; s2 = Enable 0
 writeCharacter
 
-    subi    sp, sp, 4
-    sw      ra, 0[sp]
+    subi    sp, sp, 16
+    sw      ra, 12[sp]
+    sw      s0,  8[sp]
+    sw      s1,  4[sp]
+    sw      s2,  0[sp]
 
     call waitLcdIdle
 
+    li s0, LCD_DATA
+    li s1, 0b1110
+    li s2, 0b1010
+
     ; Set to write data with data bus direction as output
-    LI a2, 0b1010
-    LI t0, LCD_DATA
-    SB a2, 1[t0]
+    SB s2, 1[s0]
 
     ; Output desired byte
-    SW a0, LCD_DATA, t0
+    SW a0, 0[s0]
 
     ; Enable signal 1
-    LI a2, 0b1110
-    LI t0, LCD_DATA
-    SB a2, 1[t0]
+    SB s1, 1[s0]
 
     ; Delay to stretch pulse
     call waiting_loop
 
     ; Disable signal 0
-    LI a2, 0b1010
-    LI t0, LCD_DATA
-    SB a2, 1[t0]
+    SB s2, 1[s0]
 
-    lw      ra, 0[sp]
-    addi    sp, sp, 4
+    lw      s2,  0[sp]
+    lw      s1,  4[sp]
+    lw      s0,  8[sp]
+    lw      ra, 12[sp]
+    addi    sp, sp, 16
 
     RET
 

@@ -106,7 +106,10 @@ KMD
 00000118: 00008067    ;     ret
 0000011C:             ; 
 0000011C:             ; 
-0000011C:             ; ; def writeCharacter (character - a0)
+0000011C:             ; ; def writeCharacter (char)
+0000011C:             ; 
+0000011C:             ; ; function arguments
+0000011C:             ; ; a0 = character to be written
 0000011C:             ; 
 0000011C:             ; ; local variables
 0000011C:             ; ; s0 = LCD_DATA
@@ -114,38 +117,39 @@ KMD
 0000011C:             ; ; s2 = Enable 0
 0000011C:             ; writeCharacter
 0000011C:             ; 
-0000011C: FFC10113    ;     subi    sp, sp, 4
-00000120: 00112023    ;     sw      ra, 0[sp]
-00000124:             ; 
-00000124: F89FF0EF    ;     call waitLcdIdle
-00000128:             ; 
-00000128:             ;     ; Set to write data with data bus direction as output
-00000128: 00A00613    ;     LI a2, 0b1010
-0000012C: 000102B7    ;     LI t0, LCD_DATA
-00000130: 10028293    ; 
-00000134: 00C280A3    ;     SB a2, 1[t0]
-00000138:             ; 
-00000138:             ;     ; Output desired byte
-00000138: 00010297    ;     SW a0, LCD_DATA, t0
-0000013C: FCA2A423    ; 
-00000140:             ; 
-00000140:             ;     ; Enable signal 1
-00000140: 00E00613    ;     LI a2, 0b1110
-00000144: 000102B7    ;     LI t0, LCD_DATA
-00000148: 10028293    ; 
-0000014C: 00C280A3    ;     SB a2, 1[t0]
+0000011C: FF010113    ;     subi    sp, sp, 16
+00000120: 00112623    ;     sw      ra, 12[sp]
+00000124: 00812423    ;     sw      s0,  8[sp]
+00000128: 00912223    ;     sw      s1,  4[sp]
+0000012C: 01212023    ;     sw      s2,  0[sp]
+00000130:             ; 
+00000130: F7DFF0EF    ;     call waitLcdIdle
+00000134:             ; 
+00000134: 00010437    ;     li s0, LCD_DATA
+00000138: 10040413    ; 
+0000013C: 00E00493    ;     li s1, 0b1110
+00000140: 00A00913    ;     li s2, 0b1010
+00000144:             ; 
+00000144:             ;     ; Set to write data with data bus direction as output
+00000144: 012400A3    ;     SB s2, 1[s0]
+00000148:             ; 
+00000148:             ;     ; Output desired byte
+00000148: 00A42023    ;     SW a0, 0[s0]
+0000014C:             ; 
+0000014C:             ;     ; Enable signal 1
+0000014C: 009400A3    ;     SB s1, 1[s0]
 00000150:             ; 
 00000150:             ;     ; Delay to stretch pulse
 00000150: 088000EF    ;     call waiting_loop
 00000154:             ; 
 00000154:             ;     ; Disable signal 0
-00000154: 00A00613    ;     LI a2, 0b1010
-00000158: 000102B7    ;     LI t0, LCD_DATA
-0000015C: 10028293    ; 
-00000160: 00C280A3    ;     SB a2, 1[t0]
-00000164:             ; 
-00000164: 00012083    ;     lw      ra, 0[sp]
-00000168: 00410113    ;     addi    sp, sp, 4
+00000154: 012400A3    ;     SB s2, 1[s0]
+00000158:             ; 
+00000158: 00012903    ;     lw      s2,  0[sp]
+0000015C: 00412483    ;     lw      s1,  4[sp]
+00000160: 00812403    ;     lw      s0,  8[sp]
+00000164: 00C12083    ;     lw      ra, 12[sp]
+00000168: 01010113    ;     addi    sp, sp, 16
 0000016C:             ; 
 0000016C: 00008067    ;     RET
 00000170:             ; 
