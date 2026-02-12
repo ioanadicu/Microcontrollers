@@ -15,8 +15,7 @@ str             defb    "Hello world!\0"    ; String that we want to print
                 align
 
 stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be used for the stack
-stack_base                                  ; This label is 'just after' the stack base - FULL DESCENDING
-                align
+stack_base      align                       ; This label is 'just after' the stack base - FULL DESCENDING
 
 
 

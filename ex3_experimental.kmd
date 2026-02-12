@@ -33,6 +33,7 @@ KMD
 00000080:             ; ; local variables
 00000080:             ; ; a7 = pointer to string
 00000080:             ; ; a0 = character to be written
+00000080:             ; ; a2 = display control signals
 00000080:             ; 
 00000080:             ; START
 00000080:             ;     ; Clearing the display - we're using writeCharacter for this but with the special clearing 
@@ -132,7 +133,7 @@ KMD
 00000128:             ; 
 00000128:             ; ; function arguments
 00000128:             ; ; a0 = character to be written
-00000128:             ; ; a1 = enable 1
+00000128:             ; ; *a1 = enable 1 (auto deduced from a2)
 00000128:             ; ; a2 = enable 0
 00000128:             ; 
 00000128:             ; ; local variables
