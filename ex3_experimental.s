@@ -26,18 +26,17 @@ stack_base                                  ; This label is 'just after' the sta
 ; local variables
 ; a7 = pointer to string
 ; a0 = character to be written
+; a2 = display control signals
 
 START
     ; Clearing the display - we're using writeCharacter for this but with the special clearing signals
     li a0, CLEAR_DB
-    li a1, 0b1100
     li a2, 0b1000 
 
     call writeCharacter
 
 
     ; Printing each thing
-    li a1, 0b1110
     li a2, 0b1010
 
     LA a7, str
@@ -124,7 +123,7 @@ STEP_2
 
 ; function arguments
 ; a0 = character to be written
-; a1 = enable 1
+; *a1 = enable 1 (auto deduced from a2)
 ; a2 = enable 0
 
 ; local variables
@@ -137,6 +136,8 @@ writeCharacter
 
 
     call waitLcdIdle
+
+    addi  a1, a2, 4
 
     li s0, LCD_DATA
 
