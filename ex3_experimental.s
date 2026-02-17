@@ -23,6 +23,7 @@ LCD_CONTROL     EQU     0x0001_0101
 MASK_BIT7       EQU     0x0000_0000
 CLEAR_DB        EQU     0b0000_0001
 DELAY           EQU     0x099690
+CLEAR_CTRL      EQU     0b1000
 
 str1            defb    "Hello world! \0"    ; String that we want to print
                 align
@@ -38,16 +39,12 @@ stack_base      align                       ; This label is 'just after' the sta
 
 ; def main()
 
-; local variables - used as function arguments
-; a0 = character to be written
-; a1 = control signals (with enable = 0)
-; a2 = display control signals
-; a7 = pointer to string
+; local variables - none (only loading into function parameters)
 
 START
     ; Clearing the display - we're using writeCharacter for this but with the special clearing signals
     li a0, CLEAR_DB
-    li a1, 0b1000 
+    li a1, CLEAR_CTRL
     call writeCharacter
 
     la a0, str1
@@ -61,37 +58,46 @@ J END
 
 
 
-; def printString()
+; def printString(pointer)
 ; a0 = pointer to string
-; s0 = using it to load char at address pointed
+
+; s0 = will hold the pointer because we plan on overwriting a0 for passing arguments to other functions
+; s1 = using it to load chat at address pointed
 
 
 printString
-    subi    sp, sp, 8
-    sw      ra,  4[sp]  ; caller saved - I save it here and use it at the end of the function 
-    sw      s0,  0[sp]  ; calee saved - saving it before executing anything and restoring when done
+    subi    sp, sp, 12
+    sw      ra,  8[sp]  ; caller saved - I save it here and use it at the end of the function 
+    sw      s0,  4[sp]  ; calee saved - saving it before executing anything and restoring when done
+    sw      s1,  0[sp]
 
-    
-    lb s0, [a0]
+    mv s0, a0
+    lb s1, [s0]
 
+    ; printing first character
+    mv a0, s1
     li a1, 0b1010   ; will be used as function argument in writeString
     call writeCharacter
 
+    ; printing the other characters until we reach the null character so we know our string ended
 notEnded
-    addi a0, a0, 1
-    lb s0, [a0]
-    beqz s0, foundNull
+    addi s0, s0, 1
+    lb s1, [s0]
+    beqz s1, foundNull
 
+    mv a0, s1
     li a1, 0b1010   ; will be used as function argument in writeString
     call writeCharacter
 
     j notEnded
+
 foundNull
 
     ; Getting ra back and the callee saved registers
-    lw      s0,  0[sp]
-    lw      ra,  4[sp]
-    addi    sp, sp, 8
+    lw      s1,  0[sp]
+    lw      s0,  4[sp]
+    lw      ra,  8[sp]
+    addi    sp, sp, 12
 
     jr ra
 
