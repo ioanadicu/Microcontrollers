@@ -1,4 +1,16 @@
-; Exercise 3
+;---------------------------------------------------------
+;       Exercise 3: Nesting Procedure Calls
+;       Maria-Ioana Dicu
+;       17 February 2026
+;
+;       This programme prints 2 strings on the display.
+;
+;       Known bugs:
+;       - Not following ABI for main function
+;       - No pause in between strings
+;       - Repeated logic for printing strings
+;
+;---------------------------------------------------------
 
 ; Defining names to aid readability
 
@@ -11,8 +23,10 @@ MASK_BIT7       EQU     0x0000_0000
 CLEAR_DB        EQU     0b0000_0001
 DELAY           EQU     0x099690
 
-; !! Add more strings and a longer wait in between them. !!
-str             defb    "Hello world!\0"    ; String that we want to print
+str1            defb    "Hello world! \0"    ; String that we want to print
+                align
+
+str2            defb    "Computer"
                 align
 
 stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be used for the stack
@@ -23,35 +37,52 @@ stack_base      align                       ; This label is 'just after' the sta
 
 ; def main()
 
-; local variables
+; local variables - used as function arguments
 ; a7 = pointer to string
 ; a0 = character to be written
+; a1 = control signals (with enable = 0)
 ; a2 = display control signals
 
 START
     ; Clearing the display - we're using writeCharacter for this but with the special clearing signals
     li a0, CLEAR_DB
-    li a2, 0b1000 
+    li a1, 0b1000 
 
     call writeCharacter
 
-
     ; Printing each thing
-    li a2, 0b1010
+    li a1, 0b1010
 
-    LA a7, str
+    LA a7, str1
     LB a0, [a7]
 
     CALL writeCharacter
 
-notEnded
+notEnded1
     addi a7, a7, 1
     LB a0, [a7]
-    BEQZ a0, foundNull
+    BEQZ a0, foundNull1
     CALL writeCharacter
-    J notEnded
+    J notEnded1
 
-foundNull
+foundNull1
+
+    LA a7, str2
+    LB a0, [a7]
+
+    CALL writeCharacter
+
+notEnded2
+    addi a7, a7, 1
+    LB a0, [a7]
+    BEQZ a0, foundNull2
+    CALL writeCharacter
+    J notEnded2
+
+
+    CALL writeCharacter
+
+foundNull2
 
 J END
 
@@ -70,8 +101,8 @@ J END
 waitLcdIdle
     ; save ra and s registers
     subi    sp, sp, 24
-    sw      ra, 20[sp]
-    sw      s0, 16[sp]
+    sw      ra, 20[sp]  ; caller saved - I save it here and use it at the end of the function 
+    sw      s0, 16[sp]  ; calee saved - saving it before executing anything and restoring when done
     sw      s1, 12[sp]
     sw      s2,  8[sp]
     sw      s3,  4[sp]
@@ -105,8 +136,8 @@ STEP_2
     AND s4, s4, s3
     BNEZ s4, STEP_2
 
-    ; Getting ra back
-    lw      s4,  0[sp]
+    ; Getting ra back and the callee saved registers
+    lw      s4,  0[sp]  
     lw      s3,  4[sp]
     lw      s2,  8[sp]
     lw      s1, 12[sp]
@@ -120,43 +151,60 @@ STEP_2
 
 
 ; def writeCharacter (character a0, signals a2)
-; !! Change a1 to s0? !!
 
 ; function arguments
 ; a0 = character to be written
-; *a1 = enable 1 (auto deduced from a2)
-; a2 = enable 0
+; a1 = control signals (with enable = 0)
 
 ; local variables
 ; s0 = LCD_DATA
 writeCharacter
 
     subi    sp, sp, 8
-    sw      ra,  4[sp]
-    sw      s0,  0[sp]
+    sw      ra,  4[sp]  ; caller saved - I save it here and use it at the end of the function 
+    sw      s0,  0[sp]  ; calee saved - saving it before executing anything and restoring when done
 
+
+    subi    sp, sp, 8
+    sw      a0,  4[sp]  ; caller saved
+    sw      a1,  0[sp]
 
     call waitLcdIdle
 
-    addi  a1, a2, 4
+    lw      a1,  0[sp]
+    lw      a0,  4[sp]
+    addi    sp, sp, 8
+
 
     li s0, LCD_DATA
 
     ; Set to write data with data bus direction as output
-    SB a2, 1[s0]
+    SB a1, 1[s0]
 
     ; Output desired byte
     SW a0, 0[s0]
 
     ; Enable signal 1
+    addi a1, a1, 4
     SB a1, 1[s0]
 
     ; Delay to stretch pulse
+    subi    sp, sp, 8
+    sw      a0,  4[sp]  ; caller saved
+    sw      a1,  0[sp]
+
     call waiting_loop
 
-    ; Disable signal 0
-    SB a2, 1[s0]
+    lw      a1,  0[sp]
+    lw      a0,  4[sp]
+    addi    sp, sp, 8
 
+
+    ; Disable signal 0
+    subi a1, a1, 4
+    SB a1, 1[s0]
+
+    ; Getting ra back and the callee saved registers
     lw      s0,  0[sp]
     lw      ra,  4[sp]
     addi    sp, sp, 8
@@ -166,7 +214,7 @@ writeCharacter
 
 
 
-; def waiting_loop
+; def waiting_loop()
 
 ; local variables
 ; t0 = takes the delay value
