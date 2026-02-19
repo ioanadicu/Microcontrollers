@@ -6,10 +6,7 @@
 ;       This programme prints 2 strings on the display.
 ;
 ;       Known bugs:
-;       - Not following ABI for main function
-;       - No pause in between strings
-;       - Repeated logic for printing strings
-;       - in printString writeCharcter should take a0 
+;       - none
 ;
 ;---------------------------------------------------------
 
@@ -24,11 +21,13 @@ MASK_BIT7       EQU     0x0000_0000
 CLEAR_DB        EQU     0b0000_0001
 DELAY           EQU     0x099690
 CLEAR_CTRL      EQU     0b1000
+WRITE_CTRL      EQU     0b1010
+SHIFT_NEXT      EQU     0b1100_0000
 
 str1            defb    "Hello world! \0"    ; String that we want to print
                 align
 
-str2            defb    "Computer\0"
+str2            defb    "Happy birthday!\0"
                 align
 
 stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be used for the stack
@@ -37,7 +36,7 @@ stack_base      align                       ; This label is 'just after' the sta
 
 
 
-; def main()
+; def start() - main
 
 ; local variables - none (only loading into function parameters)
 
@@ -50,6 +49,8 @@ START
     la a0, str1
     call printString
 
+    call moveCursor
+
     la a0, str2
     call printString
 
@@ -58,9 +59,30 @@ J END
 
 
 
+; def moveCursor
+moveCursor
+    subi    sp, sp, 4
+    sw      ra,  0[sp]
+
+    call waitLcdIdle
+
+    li a0, SHIFT_NEXT
+    li a1, CLEAR_CTRL
+    call writeCharacter
+
+    lw      ra,  0[sp]
+    addi    sp, sp, 4
+
+    jr ra
+
+
+
+
 ; def printString(pointer)
+; function arguments
 ; a0 = pointer to string
 
+; local variables
 ; s0 = will hold the pointer because we plan on overwriting a0 for passing arguments to other functions
 ; s1 = using it to load chat at address pointed
 
@@ -76,7 +98,7 @@ printString
 
     ; printing first character
     mv a0, s1
-    li a1, 0b1010   ; will be used as function argument in writeString
+    li a1, WRITE_CTRL   ; will be used as function argument in writeString
     call writeCharacter
 
     ; printing the other characters until we reach the null character so we know our string ended
@@ -86,7 +108,7 @@ notEnded
     beqz s1, foundNull
 
     mv a0, s1
-    li a1, 0b1010   ; will be used as function argument in writeString
+    li a1, WRITE_CTRL   ; will be used as function argument in writeString
     call writeCharacter
 
     j notEnded
@@ -100,8 +122,6 @@ foundNull
     addi    sp, sp, 12
 
     jr ra
-
-
 
 
 
