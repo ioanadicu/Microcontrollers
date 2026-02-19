@@ -1,219 +1,62 @@
-; Exercise 3
-
-; Defining names to aid readability
+;---------------------------------------------------------
+;       Exercise 3: Nesting Procedure Calls
+;       Maria-Ioana Dicu
+;       19 February 2026
+;
+;       This programme prints 2 strings on the LCD display.
+;       
+;       External Libraries:
+;       - uses DisplayOperations.s
+;
+;       Known bugs:
+;       - none
+;
+;---------------------------------------------------------
 
                 la      sp, stack_base      ; Set sp pointing to the end of our stack
                 j       START
 
-LCD_DATA        EQU     0x0001_0100
-LCD_CONTROL     EQU     0x0001_0101
-MASK_BIT7       EQU     0x0000_0000
-CLEAR_DB        EQU     0b0000_0001
-DELAY           EQU     0x099690
+; Defining names to aid readability
+CLEAR_DIS       EQU     0b0000_0001         ; DB7-DB0 data to clear the display
+CLEAR_CTRL      EQU     0b1000              ; Controls when we want to clear the display
 
-str             defb    "Hello world!\0"    ; String that we want to print
+str1            defb    "Hello, world!\0"    ; String that we want to print
+                align
+
+str2            defb    "Happy birthday!\0"
                 align
 
 stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be used for the stack
-stack_base                                  ; This label is 'just after' the stack base - FULL DESCENDING
-                align
+stack_base      align                       ; This label is 'just after' the stack base - FULL DESCENDING
 
 
 
 
-; def main()
+; def start() - main function
 
 ; local variables
-; a7 = pointer to string
-; a0 = character to be written
+; - only uses a0, a1 to pass function parameters
 
 START
-    call CLEAR
+    ; Clearing the display - we're calling lcdSendCommand for this but with the special clearing signals
+    li a0, CLEAR_DIS
+    li a1, CLEAR_CTRL
+    call lcdSendCommand
 
-    LA a7, str
-    LB a0, [a7]
+    ; calling printString function with string1 as argument
+    la a0, str1
+    call printString
 
-    CALL writeCharacter
+    ; calling the function to move the cursor to the next line of display
+    call moveCursor
 
-notEnded
-    addi a7, a7, 1
-    LB a0, [a7]
-    BEQZ a0, foundNull
-    CALL writeCharacter
-    J notEnded
-
-foundNull
+    ; calling printString function with string1 as argument
+    la a0, str2
+    call printString
 
 J END
 
+INCLUDE DisplayOperations.s                 ; Library with Display Operations
 
+END J . ; infinite loop to stop the program
 
-
-; def waitLcdIdle()
-
-; local variables
-; s0 = LCD_DATA
-; s1 = Enable on
-; s2 = Enable off
-; s3 = bit mask
-; s4 = status byte
-
-waitLcdIdle
-    ; save ra and s registers
-    subi    sp, sp, 24
-    sw      ra, 20[sp]
-    sw      s0, 16[sp]
-    sw      s1, 12[sp]
-    sw      s2,  8[sp]
-    sw      s3,  4[sp]
-    sw      s4,  0[sp]
-
-    li s0, LCD_DATA
-    li s1, 0b1101       ; E=1
-    li s2, 0b1001       ; E=0
-    li s3, 0x80         ; bit 7 mask
-
-    ; Set to read control with data bus direction as input
-    SB s2, 1[s0]
-
-STEP_2
-    ; Enable signal 1
-    SB s1, 1[s0]
-
-    ; Delay to stretch pulse
-    call waiting_loop
-
-    ; Read LCD status byte
-    LW s4, [s0]
-
-    ; Enable signal 0
-    SB s2, 1[s0]
-
-    ; Delay to separate enable pulses
-    call waiting_loop
-
-    ; If bit 7 high repeat from step 2
-    AND s4, s4, s3
-    BNEZ s4, STEP_2
-
-    ; Getting ra back
-    lw      s4,  0[sp]
-    lw      s3,  4[sp]
-    lw      s2,  8[sp]
-    lw      s1, 12[sp]
-    lw      s0, 16[sp]
-    lw      ra, 20[sp]
-    addi    sp, sp, 24
-
-    ret
-
-
-
-
-; def writeCharacter (char)
-
-; function arguments
-; a0 = character to be written
-
-; local variables
-; s0 = LCD_DATA
-; s1 = Enable 1
-; s2 = Enable 0
-writeCharacter
-
-    subi    sp, sp, 16
-    sw      ra, 12[sp]
-    sw      s0,  8[sp]
-    sw      s1,  4[sp]
-    sw      s2,  0[sp]
-
-    call waitLcdIdle
-
-    li s0, LCD_DATA
-    li s1, 0b1110
-    li s2, 0b1010
-
-    ; Set to write data with data bus direction as output
-    SB s2, 1[s0]
-
-    ; Output desired byte
-    SW a0, 0[s0]
-
-    ; Enable signal 1
-    SB s1, 1[s0]
-
-    ; Delay to stretch pulse
-    call waiting_loop
-
-    ; Disable signal 0
-    SB s2, 1[s0]
-
-    lw      s2,  0[sp]
-    lw      s1,  4[sp]
-    lw      s0,  8[sp]
-    lw      ra, 12[sp]
-    addi    sp, sp, 16
-
-    RET
-
-
-
-
-CLEAR
-
-    subi    sp, sp, 4
-    sw      ra, 0[sp]
-
-    call waitLcdIdle
-
-    ; DB CODE
-    LI a0, CLEAR_DB
-
-    ; RS = 0, R/W = 0, E = 0
-    LI a2, 0b1000 ; 1000
-    LI t0, LCD_DATA
-    SB a2, 1[t0]
-
-    ; Output desired byte
-    SW a0, LCD_DATA, t0
-
-    ; Enable signal 1
-    LI a2, 0b1100 ; 1100
-    LI t0, LCD_DATA
-    SB a2, 1[t0]
-
-    ; Delay to stretch pulse
-    subi sp, sp, 0x4
-    sw ra, [sp]
-
-    call waiting_loop
-
-    lw ra, [sp]
-    addi sp, sp, 0x4
-
-    ; Disable signal 0
-    LI a2, 0b1000 ; 1000
-    LI t0, LCD_DATA
-    SB a2, 1[t0]
-
-    lw      ra, 0[sp]
-    addi    sp, sp, 4
-
-    jr  ra
-
-
-
-
-; def waiting_loop
-
-; local variables
-; t0 = takes the delay value
-
-waiting_loop
-    li t0, DELAY
-loop_point
-    subi t0, t0, 0b1
-    bne t0, zero, loop_point
-    jr  ra
-
-END J .

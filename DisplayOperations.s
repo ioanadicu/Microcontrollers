@@ -1,74 +1,45 @@
-;---------------------------------------------------------
-;       Exercise 3: Nesting Procedure Calls
+;-----------------------------------------------------------------------------
+;       Display Operations Library
 ;       Maria-Ioana Dicu
-;       17 February 2026
+;       19 February 2026
 ;
-;       This programme prints 2 strings on the display.
+;       This library includes the following functions for the display:
+;       - moveCursor(): moves the cursor to the second line of the display
+;       - printString(pointer): cycles through every character of a string until it 
+;                   finds the null character and calls another function to print each
+;       - waitLcdIdle(): a function that waits and checks for the LCD to be idle
+;       - lcdSendCommand(): prints a character to the display or clears the display or
+;                   moves cursor based on signals
+;       - waitingLoop(): a waiting loop to stretch pulse width/ separate enable pulses
+;
+;       Display documentation: https://cdn.sparkfun.com/assets/9/5/f/7/b/HD44780.pdf
 ;
 ;       Known bugs:
 ;       - none
 ;
-;---------------------------------------------------------
+;-----------------------------------------------------------------------------
 
 ; Defining names to aid readability
-
-                la      sp, stack_base      ; Set sp pointing to the end of our stack
-                j       START
-
-LCD_DATA        EQU     0x0001_0100         ; Address where we write display data
-LCD_CONTROL     EQU     0x0001_0101         ; Address where we write control signals for the display
-MASK7           EQU     0x80                ; Mask used to find wether bit 7 set with an AND operaton
-CLEAR_DB        EQU     0b0000_0001         ; DB7-DB0 data to clear the display
-DELAY           EQU     0x099690            ; Delay used in the counter
-CLEAR_CTRL      EQU     0b1000              ; Controls when we want to clear the display
-WRITE_CTRL      EQU     0b1010              ; Controls when we want to write a character to the display
+LCD_DATA        EQU     0x0001_0100         ; address where we write display data
+LCD_CONTROL     EQU     0x0001_0101         ; address where we write control signals for the display
+MASK7           EQU     0x80                ; mask used to find wether bit 7 set with an AND operaton
+DELAY           EQU     0x009690            ; delay used in the counter
+WRITE_CTRL      EQU     0b1010              ; controls when we want to write a character to the display
 SHIFT_NEXT      EQU     0b1100_0000         ; DB7-DB0 data to move cursor to next line
 
-str1            defb    "Hello world! \0"    ; String that we want to print
-                align
-
-str2            defb    "Happy birthday!\0"
-                align
-
-stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be used for the stack
-stack_base      align                       ; This label is 'just after' the stack base - FULL DESCENDING
 
 
 
-
-; def start() - main
-
-; local variables - none (only loading into function parameters)
-
-START
-    ; Clearing the display - we're using writeCharacter for this but with the special clearing signals
-    li a0, CLEAR_DB
-    li a1, CLEAR_CTRL
-    call writeCharacter
-
-    la a0, str1
-    call printString
-
-    call moveCursor
-
-    la a0, str2
-    call printString
-
-J END
-
-
-
-
-; def moveCursor
+; def moveCursor(): moves the cursor to the second line of the display
 moveCursor
     subi    sp, sp, 4
-    sw      ra,  0[sp]
+    sw      ra,  0[sp]  ; caller saved - I save it here and use it at the end of the function 
 
     call waitLcdIdle
 
     li a0, SHIFT_NEXT
-    li a1, CLEAR_CTRL
-    call writeCharacter
+    li a1, CLEAR_CTRL                       ; using same controls as the ones when clearing the display
+    call lcdSendCommand                     ; calling lcdSendCommand with DB7-DB0 data to move cursor
 
     lw      ra,  0[sp]
     addi    sp, sp, 4
@@ -78,7 +49,8 @@ moveCursor
 
 
 
-; def printString(pointer)
+; def printString(pointer): cycles through every character of a string until it 
+;                   finds the null character and calls another function to print each
 ; function arguments
 ; a0 = pointer to string
 
@@ -99,7 +71,7 @@ printString
     ; printing first character
     mv a0, s1
     li a1, WRITE_CTRL   ; will be used as function argument in writeString
-    call writeCharacter
+    call lcdSendCommand
 
     ; printing the other characters until we reach the null character so we know our string ended
 notEnded
@@ -109,7 +81,7 @@ notEnded
 
     mv a0, s1
     li a1, WRITE_CTRL   ; will be used as function argument in writeString
-    call writeCharacter
+    call lcdSendCommand
 
     j notEnded
 
@@ -126,7 +98,7 @@ foundNull
 
 
 
-; def waitLcdIdle()
+; def waitLcdIdle(): a function that waits and checks for the LCD to be idle
 
 ; local variables
 ; s0 = LCD_DATA
@@ -139,39 +111,39 @@ waitLcdIdle
     ; save ra and s registers
     subi    sp, sp, 24
     sw      ra, 20[sp]  ; caller saved - I save it here and use it at the end of the function 
-    sw      s0, 16[sp]  ; calee saved - saving it before executing anything and restoring when done
+    sw      s0, 16[sp]  ; s registers calee saved - saving it before executing anything and restoring when done
     sw      s1, 12[sp]
     sw      s2,  8[sp]
     sw      s3,  4[sp]
     sw      s4,  0[sp]
 
     li s0, LCD_DATA
-    li s1, 0b1101       ; E=1
-    li s2, 0b1001       ; E=0
+    li s1, 0b1101       ; control signals with E=1
+    li s2, 0b1001       ; control signals with E=0
     li s3, MASK7        ; bit 7 mask
 
     ; Set to read control with data bus direction as input
-    SB s2, 1[s0]
+    sb s2, 1[s0]
 
 STEP_2
     ; Enable signal 1
-    SB s1, 1[s0]
+    sb s1, 1[s0]
 
     ; Delay to stretch pulse
     call waiting_loop
 
     ; Read LCD status byte
-    LW s4, [s0]
+    lw s4, [s0]
 
     ; Enable signal 0
-    SB s2, 1[s0]
+    sb s2, 1[s0]
 
     ; Delay to separate enable pulses
     call waiting_loop
 
     ; If bit 7 high repeat from step 2
-    AND s4, s4, s3
-    BNEZ s4, STEP_2
+    and s4, s4, s3
+    bnez s4, STEP_2
 
     ; Getting ra back and the callee saved registers
     lw      s4,  0[sp]  
@@ -187,19 +159,20 @@ STEP_2
 
 
 
-; def writeCharacter (character a0, signals a2)
+; def lcdSendCommand (character a0, signals a2): prints a character to the display or clears the display or
+;                   moves cursor based on signals
 
 ; function arguments
-; a0 = character to be written
+; a0 = character/command to be written
 ; a1 = control signals (with enable = 0)
 
 ; local variables
 ; s0 = LCD_DATA
-writeCharacter
+lcdSendCommand
 
     subi    sp, sp, 8
     sw      ra,  4[sp]  ; caller saved - I save it here and use it at the end of the function 
-    sw      s0,  0[sp]  ; calee saved - saving it before executing anything and restoring when done
+    sw      s0,  0[sp]  ; s register calee saved - saving it before executing anything and restoring when done
 
 
     subi    sp, sp, 8
@@ -216,14 +189,14 @@ writeCharacter
     li s0, LCD_DATA
 
     ; Set to write data with data bus direction as output
-    SB a1, 1[s0]
+    sb a1, 1[s0]
 
     ; Output desired byte
-    SW a0, 0[s0]
+    sw a0, 0[s0]
 
     ; Enable signal 1
     addi a1, a1, 4
-    SB a1, 1[s0]
+    sb a1, 1[s0]
 
     ; Delay to stretch pulse
     subi    sp, sp, 8
@@ -239,7 +212,7 @@ writeCharacter
 
     ; Disable signal 0
     subi a1, a1, 4
-    SB a1, 1[s0]
+    sb a1, 1[s0]
 
     ; Getting ra back and the callee saved registers
     lw      s0,  0[sp]
@@ -251,10 +224,10 @@ writeCharacter
 
 
 
-; def waiting_loop()
+; def waiting_loop(): a waiting loop to stretch pulse width/ separate enable pulses
 
 ; local variables
-; t0 = takes the delay value
+; t0 = takes the delay value (caller saved, we don't need to worry)
 
 waiting_loop
     li t0, DELAY
@@ -262,8 +235,3 @@ loop_point
     subi t0, t0, 0b1
     bne t0, zero, loop_point
     jr  ra
-
-
-
-
-END J . ; infinite loop to stop the program

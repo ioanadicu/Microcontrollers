@@ -7,7 +7,7 @@ KMD
 00000000:             ; ;       This programme prints 2 strings on the display.
 00000000:             ; ;
 00000000:             ; ;       Known bugs:
-00000000:             ; ;       - in printString writeCharcter should take a0 
+00000000:             ; ;       - none
 00000000:             ; ;
 00000000:             ; ;---------------------------------------------------------
 00000000:             ; 
@@ -17,14 +17,17 @@ KMD
 00000004: 09010113    ; 
 00000008: 0880006F    ;                 j       START
 0000000C:             ; 
-0000000C:             ; LCD_DATA        EQU     0x0001_0100
-0000000C:             ; LCD_CONTROL     EQU     0x0001_0101
-0000000C:             ; MASK_BIT7       EQU     0x0000_0000
-0000000C:             ; CLEAR_DB        EQU     0b0000_0001
-0000000C:             ; DELAY           EQU     0x099690
-0000000C:             ; CLEAR_CTRL      EQU     0b1000
-0000000C:             ; WRITE_CTRL      EQU     0b1010
-0000000C:             ; SHIFT_NEXT      EQU     0b1100_0000
+0000000C:             ; LCD_DATA        EQU     0x0001_0100         ; Address where we write display data
+0000000C:             ; LCD_CONTROL     EQU     0x0001_0101         ; Address where we write control signals for the di
+                      ; splay
+0000000C:             ; MASK7           EQU     0x80                ; Mask used to find wether bit 7 set with an AND op
+                      ; eraton
+0000000C:             ; CLEAR_DB        EQU     0b0000_0001         ; DB7-DB0 data to clear the display
+0000000C:             ; DELAY           EQU     0x099690            ; Delay used in the counter
+0000000C:             ; CLEAR_CTRL      EQU     0b1000              ; Controls when we want to clear the display
+0000000C:             ; WRITE_CTRL      EQU     0b1010              ; Controls when we want to write a character to the
+                      ;  display
+0000000C:             ; SHIFT_NEXT      EQU     0b1100_0000         ; DB7-DB0 data to move cursor to next line
 0000000C:             ; 
 0000000C: 48 65 6C 6C ; str1            defb    "Hello world! \0"    ; String that we want to print
 00000010: 6F 20 77 6F ; 
@@ -166,7 +169,7 @@ KMD
 00000154: 10040413    ; 
 00000158: 00D00493    ;     li s1, 0b1101       ; E=1
 0000015C: 00900913    ;     li s2, 0b1001       ; E=0
-00000160: 08000993    ;     li s3, 0x80         ; bit 7 mask
+00000160: 08000993    ;     li s3, MASK7        ; bit 7 mask
 00000164:             ; 
 00000164:             ;     ; Set to read control with data bus direction as input
 00000164: 012400A3    ;     SB s2, 1[s0]
@@ -292,7 +295,7 @@ KMD
 Symbol Table: Labels
 : LCD_DATA                          00010100  Value
 : LCD_CONTROL                       00010101  Value
-: MASK_BIT7                         00000000  Value
+: MASK7                             00000080  Value
 : CLEAR_DB                          00000001  Value
 : DELAY                             00099690  Value
 : CLEAR_CTRL                        00000008  Value

@@ -1,231 +1,353 @@
 KMD
-00000000:             ; ; Exercise 3
-00000000:             ; 
-00000000:             ; ; Define names to aid readability
-00000000:             ; 
+00000000:             ; ;---------------------------------------------------------
+00000000:             ; ;       Exercise 3: Nesting Procedure Calls
+00000000:             ; ;       Maria-Ioana Dicu
+00000000:             ; ;       19 February 2026
+00000000:             ; ;
+00000000:             ; ;       This programme prints 2 strings on the LCD display.
+00000000:             ; ;       
+00000000:             ; ;       External Libraries:
+00000000:             ; ;       - uses DisplayOperations.s
+00000000:             ; ;
+00000000:             ; ;       Known bugs:
+00000000:             ; ;       - none
+00000000:             ; ;
+00000000:             ; ;---------------------------------------------------------
 00000000:             ; 
 00000000: 00000117    ;                 la      sp, stack_base      ; Set sp pointing to the end of our stack
-00000004: 08010113    ; 
-00000008: 0780006F    ;                 j       START
+00000004: 09010113    ; 
+00000008: 0880006F    ;                 j       START
 0000000C:             ; 
-0000000C:             ; LCD_DATA        EQU     0x0001_0100
-0000000C:             ; LCD_CONTROL     EQU     0x0001_0101
-0000000C:             ; MASK_BIT7       EQU     0x0000_0000
-0000000C:             ; CLEAR_DB        EQU     0b0000_0001
-0000000C:             ; DELAY           EQU     0x099690
+0000000C:             ; ; Defining names to aid readability
+0000000C:             ; CLEAR_DIS       EQU     0b0000_0001         ; DB7-DB0 data to clear the display
+0000000C:             ; CLEAR_CTRL      EQU     0b1000              ; Controls when we want to clear the display
 0000000C:             ; 
-0000000C: 48 65 6C 6C ; str             defb    "Hello world!\0"    ; String that we want to print
-00000010: 6F 20 77 6F ; 
-00000014: 72 6C 64 21 ; 
-00000018: 00          ; 
+0000000C: 48 65 6C 6C ; str1            defb    "Hello, world!\0"    ; String that we want to print
+00000010: 6F 2C 20 77 ; 
+00000014: 6F 72 6C 64 ; 
+00000018: 21 00       ; 
 0000001C:             ;                 align
 0000001C:             ; 
-0000001C:             ; stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be used
+0000001C: 48 61 70 70 ; str2            defb    "Happy birthday!\0"
+00000020: 79 20 62 69 ; 
+00000024: 72 74 68 64 ; 
+00000028: 61 79 21 00 ; 
+0000002C:             ;                 align
+0000002C:             ; 
+0000002C:             ; stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be used
                       ;  for the stack
-00000080:             ; stack_base                                  ; This label is 'just after' the stack base - FULL 
+00000090:             ; stack_base      align                       ; This label is 'just after' the stack base - FULL 
                       ; DESCENDING
-00000080:             ;                 align
-00000080:             ; 
-00000080:             ; START
-00000080: 0F0000EF    ;     call CLEAR
-00000084:             ; 
-00000084: 00000897    ;     LA a7, str
-00000088: F8888893    ; 
-0000008C: 00088503    ;     LB a0, [a7]
 00000090:             ; 
-00000090: 08C000EF    ;     CALL writeCharacter
-00000094:             ; 
-00000094:             ; notEnded
-00000094: 00188893    ;     addi a7, a7, 1
-00000098: 00088503    ;     LB a0, [a7]
-0000009C: 00050663    ;     BEQZ a0, foundNull
-000000A0: 07C000EF    ;     CALL writeCharacter
-000000A4: FF1FF06F    ;     J notEnded
+00000090:             ; 
+00000090:             ; 
+00000090:             ; 
+00000090:             ; ; def start() - main function
+00000090:             ; 
+00000090:             ; ; local variables
+00000090:             ; ; - only uses a0, a1 to pass function parameters
+00000090:             ; 
+00000090:             ; START
+00000090:             ;     ; Clearing the display - we're calling lcdSendCommand for this but with the special clearin
+                      ; g signals
+00000090: 00100513    ;     li a0, CLEAR_DIS
+00000094: 00800593    ;     li a1, CLEAR_CTRL
+00000098: 10C000EF    ;     call lcdSendCommand
+0000009C:             ; 
+0000009C:             ;     ; calling printString function with string1 as argument
+0000009C: 00000517    ;     la a0, str1
+000000A0: F7050513    ; 
+000000A4: 03C000EF    ;     call printString
 000000A8:             ; 
-000000A8:             ; foundNull
-000000A8:             ; 
-000000A8: 1440006F    ; J END
+000000A8:             ;     ; calling the function to move the cursor to the next line of display
+000000A8: 014000EF    ;     call moveCursor
 000000AC:             ; 
-000000AC:             ; ; def waitLcdIdle()
-000000AC:             ; 
-000000AC:             ; ; local variables
-000000AC:             ; ; s0 = LCD_DATA
-000000AC:             ; ; s1 = Enable on
-000000AC:             ; ; s2 = Enable off
-000000AC:             ; ; s3 = bit mask
-000000AC:             ; ; s4 = status byte
-000000AC:             ; 
-000000AC:             ; waitLcdIdle
-000000AC:             ;     ; save ra and s registers
-000000AC: FE810113    ;     subi    sp, sp, 24
-000000B0: 00112A23    ;     sw      ra, 20[sp]
-000000B4: 00812823    ;     sw      s0, 16[sp]
-000000B8: 00912623    ;     sw      s1, 12[sp]
-000000BC: 01212423    ;     sw      s2,  8[sp]
-000000C0: 01312223    ;     sw      s3,  4[sp]
-000000C4: 01412023    ;     sw      s4,  0[sp]
+000000AC:             ;     ; calling printString function with string1 as argument
+000000AC: 00000517    ;     la a0, str2
+000000B0: F7050513    ; 
+000000B4: 02C000EF    ;     call printString
+000000B8:             ; 
+000000B8: 1740006F    ; J END
+000000BC:             ; 
+000000BC:             ; INCLUDE DisplayOperations.s                 ; Library with Display Operations
+000000BC:             ; ;-----------------------------------------------------------------------------
+000000BC:             ; ;       Display Operations Library
+000000BC:             ; ;       Maria-Ioana Dicu
+000000BC:             ; ;       19 February 2026
+000000BC:             ; ;
+000000BC:             ; ;       This library includes the following functions for the display:
+000000BC:             ; ;       - moveCursor(): moves the cursor to the second line of the display
+000000BC:             ; ;       - printString(pointer): cycles through every character of a string until it 
+000000BC:             ; ;                   finds the null character and calls another function to print each
+000000BC:             ; ;       - waitLcdIdle(): a function that waits and checks for the LCD to be idle
+000000BC:             ; ;       - lcdSendCommand(): prints a character to the display or clears the display or
+000000BC:             ; ;                   moves cursor based on signals
+000000BC:             ; ;       - waitingLoop(): a waiting loop to stretch pulse width/ separate enable pulses
+000000BC:             ; ;
+000000BC:             ; ;       Display documentation: https://cdn.sparkfun.com/assets/9/5/f/7/b/HD44780.pdf
+000000BC:             ; ;
+000000BC:             ; ;       Known bugs:
+000000BC:             ; ;       - none
+000000BC:             ; ;
+000000BC:             ; ;-----------------------------------------------------------------------------
+000000BC:             ; 
+000000BC:             ; ; Defining names to aid readability
+000000BC:             ; LCD_DATA        EQU     0x0001_0100         ; address where we write display data
+000000BC:             ; LCD_CONTROL     EQU     0x0001_0101         ; address where we write control signals for the di
+                      ; splay
+000000BC:             ; MASK7           EQU     0x80                ; mask used to find wether bit 7 set with an AND op
+                      ; eraton
+000000BC:             ; DELAY           EQU     0x009690            ; delay used in the counter
+000000BC:             ; WRITE_CTRL      EQU     0b1010              ; controls when we want to write a character to the
+                      ;  display
+000000BC:             ; SHIFT_NEXT      EQU     0b1100_0000         ; DB7-DB0 data to move cursor to next line
+000000BC:             ; 
+000000BC:             ; 
+000000BC:             ; 
+000000BC:             ; 
+000000BC:             ; ; def moveCursor(): moves the cursor to the second line of the display
+000000BC:             ; moveCursor
+000000BC: FFC10113    ;     subi    sp, sp, 4
+000000C0: 00112023    ;     sw      ra,  0[sp]  ; caller saved - I save it here and use it at the end of the function 
+000000C4:             ; 
+000000C4: 070000EF    ;     call waitLcdIdle
 000000C8:             ; 
-000000C8: 00010437    ;     li s0, LCD_DATA
-000000CC: 10040413    ; 
-000000D0: 00D00493    ;     li s1, 0b1101       ; E=1
-000000D4: 00900913    ;     li s2, 0b1001       ; E=0
-000000D8: 08000993    ;     li s3, 0x80         ; bit 7 mask
+000000C8: 0C000513    ;     li a0, SHIFT_NEXT
+000000CC: 00800593    ;     li a1, CLEAR_CTRL                       ; using same controls as the ones when clearing the
+                      ;  display
+000000D0: 0D4000EF    ;     call lcdSendCommand                     ; calling lcdSendCommand with DB7-DB0 data to move 
+                      ; cursor
+000000D4:             ; 
+000000D4: 00012083    ;     lw      ra,  0[sp]
+000000D8: 00410113    ;     addi    sp, sp, 4
 000000DC:             ; 
-000000DC:             ;     ; Set to read control with data bus direction as input
-000000DC: 012400A3    ;     SB s2, 1[s0]
+000000DC: 00008067    ;     jr ra
 000000E0:             ; 
-000000E0:             ; STEP_2
-000000E0:             ;     ; Enable signal 1
-000000E0: 009400A3    ;     SB s1, 1[s0]
-000000E4:             ; 
-000000E4:             ;     ; Delay to stretch pulse
-000000E4: 0F4000EF    ;     call waiting_loop
-000000E8:             ; 
-000000E8:             ;     ; Read LCD status byte
-000000E8: 00042A03    ;     LW s4, [s0]
-000000EC:             ; 
-000000EC:             ;     ; Enable signal 0
-000000EC: 012400A3    ;     SB s2, 1[s0]
+000000E0:             ; 
+000000E0:             ; 
+000000E0:             ; 
+000000E0:             ; ; def printString(pointer): cycles through every character of a string until it 
+000000E0:             ; ;                   finds the null character and calls another function to print each
+000000E0:             ; ; function arguments
+000000E0:             ; ; a0 = pointer to string
+000000E0:             ; 
+000000E0:             ; ; local variables
+000000E0:             ; ; s0 = will hold the pointer because we plan on overwriting a0 for passing arguments to other f
+                      ; unctions
+000000E0:             ; ; s1 = using it to load chat at address pointed
+000000E0:             ; 
+000000E0:             ; 
+000000E0:             ; printString
+000000E0: FF410113    ;     subi    sp, sp, 12
+000000E4: 00112423    ;     sw      ra,  8[sp]  ; caller saved - I save it here and use it at the end of the function 
+000000E8: 00812223    ;     sw      s0,  4[sp]  ; calee saved - saving it before executing anything and restoring when 
+                      ; done
+000000EC: 00912023    ;     sw      s1,  0[sp]
 000000F0:             ; 
-000000F0:             ;     ; Delay to separate enable pulses
-000000F0: 0E8000EF    ;     call waiting_loop
-000000F4:             ; 
-000000F4:             ;     ; If bit 7 high repeat from step 2
-000000F4: 013A7A33    ;     AND s4, s4, s3
-000000F8: FE0A14E3    ;     BNEZ s4, STEP_2
-000000FC:             ; 
-000000FC:             ;     ; Getting ra back
-000000FC: 00012A03    ;     lw      s4,  0[sp]
-00000100: 00412983    ;     lw      s3,  4[sp]
-00000104: 00812903    ;     lw      s2,  8[sp]
-00000108: 00C12483    ;     lw      s1, 12[sp]
-0000010C: 01012403    ;     lw      s0, 16[sp]
-00000110: 01412083    ;     lw      ra, 20[sp]
-00000114: 01810113    ;     addi    sp, sp, 24
-00000118:             ; 
-00000118: 00008067    ;     ret
+000000F0: 00050413    ;     mv s0, a0
+000000F4: 00040483    ;     lb s1, [s0]
+000000F8:             ; 
+000000F8:             ;     ; printing first character
+000000F8: 00048513    ;     mv a0, s1
+000000FC: 00A00593    ;     li a1, WRITE_CTRL   ; will be used as function argument in writeString
+00000100: 0A4000EF    ;     call lcdSendCommand
+00000104:             ; 
+00000104:             ;     ; printing the other characters until we reach the null character so we know our string end
+                      ; ed
+00000104:             ; notEnded
+00000104: 00140413    ;     addi s0, s0, 1
+00000108: 00040483    ;     lb s1, [s0]
+0000010C: 00048A63    ;     beqz s1, foundNull
+00000110:             ; 
+00000110: 00048513    ;     mv a0, s1
+00000114: 00A00593    ;     li a1, WRITE_CTRL   ; will be used as function argument in writeString
+00000118: 08C000EF    ;     call lcdSendCommand
 0000011C:             ; 
-0000011C:             ; 
-0000011C:             ; ; def writeCharacter (char)
-0000011C:             ; 
-0000011C:             ; ; function arguments
-0000011C:             ; ; a0 = character to be written
-0000011C:             ; 
-0000011C:             ; ; local variables
-0000011C:             ; ; s0 = LCD_DATA
-0000011C:             ; ; s1 = Enable 1
-0000011C:             ; ; s2 = Enable 0
-0000011C:             ; writeCharacter
-0000011C:             ; 
-0000011C: FF010113    ;     subi    sp, sp, 16
-00000120: 00112623    ;     sw      ra, 12[sp]
-00000124: 00812423    ;     sw      s0,  8[sp]
-00000128: 00912223    ;     sw      s1,  4[sp]
-0000012C: 01212023    ;     sw      s2,  0[sp]
+0000011C: FE9FF06F    ;     j notEnded
+00000120:             ; 
+00000120:             ; foundNull
+00000120:             ; 
+00000120:             ;     ; Getting ra back and the callee saved registers
+00000120: 00012483    ;     lw      s1,  0[sp]
+00000124: 00412403    ;     lw      s0,  4[sp]
+00000128: 00812083    ;     lw      ra,  8[sp]
+0000012C: 00C10113    ;     addi    sp, sp, 12
 00000130:             ; 
-00000130: F7DFF0EF    ;     call waitLcdIdle
+00000130: 00008067    ;     jr ra
 00000134:             ; 
-00000134: 00010437    ;     li s0, LCD_DATA
-00000138: 10040413    ; 
-0000013C: 00E00493    ;     li s1, 0b1110
-00000140: 00A00913    ;     li s2, 0b1010
-00000144:             ; 
-00000144:             ;     ; Set to write data with data bus direction as output
-00000144: 012400A3    ;     SB s2, 1[s0]
-00000148:             ; 
-00000148:             ;     ; Output desired byte
-00000148: 00A42023    ;     SW a0, 0[s0]
-0000014C:             ; 
-0000014C:             ;     ; Enable signal 1
-0000014C: 009400A3    ;     SB s1, 1[s0]
+00000134:             ; 
+00000134:             ; 
+00000134:             ; 
+00000134:             ; ; def waitLcdIdle(): a function that waits and checks for the LCD to be idle
+00000134:             ; 
+00000134:             ; ; local variables
+00000134:             ; ; s0 = LCD_DATA
+00000134:             ; ; s1 = Enable on
+00000134:             ; ; s2 = Enable off
+00000134:             ; ; s3 = bit mask
+00000134:             ; ; s4 = status byte
+00000134:             ; 
+00000134:             ; waitLcdIdle
+00000134:             ;     ; save ra and s registers
+00000134: FE810113    ;     subi    sp, sp, 24
+00000138: 00112A23    ;     sw      ra, 20[sp]  ; caller saved - I save it here and use it at the end of the function 
+0000013C: 00812823    ;     sw      s0, 16[sp]  ; s registers calee saved - saving it before executing anything and res
+                      ; toring when done
+00000140: 00912623    ;     sw      s1, 12[sp]
+00000144: 01212423    ;     sw      s2,  8[sp]
+00000148: 01312223    ;     sw      s3,  4[sp]
+0000014C: 01412023    ;     sw      s4,  0[sp]
 00000150:             ; 
-00000150:             ;     ; Delay to stretch pulse
-00000150: 088000EF    ;     call waiting_loop
-00000154:             ; 
-00000154:             ;     ; Disable signal 0
-00000154: 012400A3    ;     SB s2, 1[s0]
-00000158:             ; 
-00000158: 00012903    ;     lw      s2,  0[sp]
-0000015C: 00412483    ;     lw      s1,  4[sp]
-00000160: 00812403    ;     lw      s0,  8[sp]
-00000164: 00C12083    ;     lw      ra, 12[sp]
-00000168: 01010113    ;     addi    sp, sp, 16
+00000150: 00010437    ;     li s0, LCD_DATA
+00000154: 10040413    ; 
+00000158: 00D00493    ;     li s1, 0b1101       ; control signals with E=1
+0000015C: 00900913    ;     li s2, 0b1001       ; control signals with E=0
+00000160: 08000993    ;     li s3, MASK7        ; bit 7 mask
+00000164:             ; 
+00000164:             ;     ; Set to read control with data bus direction as input
+00000164: 012400A3    ;     sb s2, 1[s0]
+00000168:             ; 
+00000168:             ; STEP_2
+00000168:             ;     ; Enable signal 1
+00000168: 009400A3    ;     sb s1, 1[s0]
 0000016C:             ; 
-0000016C: 00008067    ;     RET
+0000016C:             ;     ; Delay to stretch pulse
+0000016C: 0AC000EF    ;     call waiting_loop
 00000170:             ; 
-00000170:             ; CLEAR
-00000170:             ; 
-00000170: FFC10113    ;     subi    sp, sp, 4
-00000174: 00112023    ;     sw      ra, 0[sp]
+00000170:             ;     ; Read LCD status byte
+00000170: 00042A03    ;     lw s4, [s0]
+00000174:             ; 
+00000174:             ;     ; Enable signal 0
+00000174: 012400A3    ;     sb s2, 1[s0]
 00000178:             ; 
-00000178: F35FF0EF    ;     call waitLcdIdle
+00000178:             ;     ; Delay to separate enable pulses
+00000178: 0A0000EF    ;     call waiting_loop
 0000017C:             ; 
-0000017C:             ;     ; DB CODE
-0000017C: 00100513    ;     LI a0, CLEAR_DB
-00000180:             ; 
-00000180:             ;     ; RS = 0, R/W = 0, E = 0
-00000180: 00800613    ;     LI a2, 0b1000 ; 1000
-00000184: 000102B7    ;     LI t0, LCD_DATA
-00000188: 10028293    ; 
-0000018C: 00C280A3    ;     SB a2, 1[t0]
-00000190:             ; 
-00000190:             ;     ; Output desired byte
-00000190: 00010297    ;     SW a0, LCD_DATA, t0
-00000194: F6A2A823    ; 
-00000198:             ; 
-00000198:             ;     ; Enable signal 1
-00000198: 00C00613    ;     LI a2, 0b1100 ; 1100
-0000019C: 000102B7    ;     LI t0, LCD_DATA
-000001A0: 10028293    ; 
-000001A4: 00C280A3    ;     SB a2, 1[t0]
-000001A8:             ; 
-000001A8:             ;     ; Delay to stretch pulse
-000001A8: FFC10113    ;     subi sp, sp, 0x4
-000001AC: 00112023    ;     sw ra, [sp]
+0000017C:             ;     ; If bit 7 high repeat from step 2
+0000017C: 013A7A33    ;     and s4, s4, s3
+00000180: FE0A14E3    ;     bnez s4, STEP_2
+00000184:             ; 
+00000184:             ;     ; Getting ra back and the callee saved registers
+00000184: 00012A03    ;     lw      s4,  0[sp]  
+00000188: 00412983    ;     lw      s3,  4[sp]
+0000018C: 00812903    ;     lw      s2,  8[sp]
+00000190: 00C12483    ;     lw      s1, 12[sp]
+00000194: 01012403    ;     lw      s0, 16[sp]
+00000198: 01412083    ;     lw      ra, 20[sp]
+0000019C: 01810113    ;     addi    sp, sp, 24
+000001A0:             ; 
+000001A0: 00008067    ;     ret
+000001A4:             ; 
+000001A4:             ; 
+000001A4:             ; 
+000001A4:             ; 
+000001A4:             ; ; def lcdSendCommand (character a0, signals a2): prints a character to the display or clears th
+                      ; e display or
+000001A4:             ; ;                   moves cursor based on signals
+000001A4:             ; 
+000001A4:             ; ; function arguments
+000001A4:             ; ; a0 = character/command to be written
+000001A4:             ; ; a1 = control signals (with enable = 0)
+000001A4:             ; 
+000001A4:             ; ; local variables
+000001A4:             ; ; s0 = LCD_DATA
+000001A4:             ; lcdSendCommand
+000001A4:             ; 
+000001A4: FF810113    ;     subi    sp, sp, 8
+000001A8: 00112223    ;     sw      ra,  4[sp]  ; caller saved - I save it here and use it at the end of the function 
+000001AC: 00812023    ;     sw      s0,  0[sp]  ; s register calee saved - saving it before executing anything and rest
+                      ; oring when done
 000001B0:             ; 
-000001B0: 028000EF    ;     call waiting_loop
-000001B4:             ; 
-000001B4: 00012083    ;     lw ra, [sp]
-000001B8: 00410113    ;     addi sp, sp, 0x4
+000001B0:             ; 
+000001B0: FF810113    ;     subi    sp, sp, 8
+000001B4: 00A12223    ;     sw      a0,  4[sp]  ; caller saved
+000001B8: 00B12023    ;     sw      a1,  0[sp]
 000001BC:             ; 
-000001BC:             ;     ; Disable signal 0
-000001BC: 00800613    ;     LI a2, 0b1000 ; 1000
-000001C0: 000102B7    ;     LI t0, LCD_DATA
-000001C4: 10028293    ; 
-000001C8: 00C280A3    ;     SB a2, 1[t0]
+000001BC: F79FF0EF    ;     call waitLcdIdle
+000001C0:             ; 
+000001C0: 00012583    ;     lw      a1,  0[sp]
+000001C4: 00412503    ;     lw      a0,  4[sp]
+000001C8: 00810113    ;     addi    sp, sp, 8
 000001CC:             ; 
-000001CC: 00012083    ;     lw      ra, 0[sp]
-000001D0: 00410113    ;     addi    sp, sp, 4
+000001CC:             ; 
+000001CC: 00010437    ;     li s0, LCD_DATA
+000001D0: 10040413    ; 
 000001D4:             ; 
-000001D4: 00008067    ;     jr  ra
+000001D4:             ;     ; Set to write data with data bus direction as output
+000001D4: 00B400A3    ;     sb a1, 1[s0]
 000001D8:             ; 
-000001D8:             ; 
-000001D8:             ; waiting_loop
-000001D8: 000992B7    ;     li t0, DELAY
-000001DC: 69028293    ; 
-000001E0:             ; loop_point
-000001E0: FFF28293    ;     subi t0, t0, 0b1
-000001E4: FE029EE3    ;     bne t0, zero, loop_point
-000001E8: 00008067    ;     jr  ra
-000001EC:             ; 
-000001EC: 0000006F    ; END J .
+000001D8:             ;     ; Output desired byte
+000001D8: 00A42023    ;     sw a0, 0[s0]
+000001DC:             ; 
+000001DC:             ;     ; Enable signal 1
+000001DC: 00458593    ;     addi a1, a1, 4
+000001E0: 00B400A3    ;     sb a1, 1[s0]
+000001E4:             ; 
+000001E4:             ;     ; Delay to stretch pulse
+000001E4: FF810113    ;     subi    sp, sp, 8
+000001E8: 00A12223    ;     sw      a0,  4[sp]  ; caller saved
+000001EC: 00B12023    ;     sw      a1,  0[sp]
+000001F0:             ; 
+000001F0: 028000EF    ;     call waiting_loop
+000001F4:             ; 
+000001F4: 00012583    ;     lw      a1,  0[sp]
+000001F8: 00412503    ;     lw      a0,  4[sp]
+000001FC: 00810113    ;     addi    sp, sp, 8
+00000200:             ; 
+00000200:             ; 
+00000200:             ;     ; Disable signal 0
+00000200: FFC58593    ;     subi a1, a1, 4
+00000204: 00B400A3    ;     sb a1, 1[s0]
+00000208:             ; 
+00000208:             ;     ; Getting ra back and the callee saved registers
+00000208: 00012403    ;     lw      s0,  0[sp]
+0000020C: 00412083    ;     lw      ra,  4[sp]
+00000210: 00810113    ;     addi    sp, sp, 8
+00000214:             ; 
+00000214: 00008067    ;     jr ra
+00000218:             ; 
+00000218:             ; 
+00000218:             ; 
+00000218:             ; 
+00000218:             ; ; def waiting_loop(): a waiting loop to stretch pulse width/ separate enable pulses
+00000218:             ; 
+00000218:             ; ; local variables
+00000218:             ; ; t0 = takes the delay value (caller saved, we don't need to worry)
+00000218:             ; 
+00000218:             ; waiting_loop
+00000218: 000092B7    ;     li t0, DELAY
+0000021C: 69028293    ; 
+00000220:             ; loop_point
+00000220: FFF28293    ;     subi t0, t0, 0b1
+00000224: FE029EE3    ;     bne t0, zero, loop_point
+00000228: 00008067    ;     jr  ra
+0000022C:             ; 
+0000022C:             ; 
+0000022C: 0000006F    ; END J . ; infinite loop to stop the program
+00000230:             ; 
+00000230:             ; 
 
 Symbol Table: Labels
+: CLEAR_DIS                         00000001  Value
+: CLEAR_CTRL                        00000008  Value
+: str1                              0000000C  Label
+: str2                              0000001C  Label
+: stack                             0000002C  Label
+: stack_base                        00000090  Label
+: START                             00000090  Label
 : LCD_DATA                          00010100  Value
 : LCD_CONTROL                       00010101  Value
-: MASK_BIT7                         00000000  Value
-: CLEAR_DB                          00000001  Value
-: DELAY                             00099690  Value
-: str                               0000000C  Label
-: stack                             0000001C  Label
-: stack_base                        00000080  Label
-: START                             00000080  Label
-: notEnded                          00000094  Label
-: foundNull                         000000A8  Label
-: waitLcdIdle                       000000AC  Label
-: STEP_2                            000000E0  Label
-: writeCharacter                    0000011C  Label
-: CLEAR                             00000170  Label
-: waiting_loop                      000001D8  Label
-: loop_point                        000001E0  Label
-: END                               000001EC  Label
+: MASK7                             00000080  Value
+: DELAY                             00009690  Value
+: WRITE_CTRL                        0000000A  Value
+: SHIFT_NEXT                        000000C0  Value
+: moveCursor                        000000BC  Label
+: printString                       000000E0  Label
+: notEnded                          00000104  Label
+: foundNull                         00000120  Label
+: waitLcdIdle                       00000134  Label
+: STEP_2                            00000168  Label
+: lcdSendCommand                    000001A4  Label
+: waiting_loop                      00000218  Label
+: loop_point                        00000220  Label
+: END                               0000022C  Label
