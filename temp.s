@@ -67,10 +67,17 @@ mhandler
 	; Can ret(urn) to here
 
 trap_table
-	defw	trap_handler_0		j 	.	; Instruction address misaligned
-	defw	trap_handler_1		j	. 	; Instruction access fault
-	defw	trap_handler_2		j	. 	; Illegal instruction
-	defw	trap_handler_3		j	. 	;  
+	defw	trap_handler_0	; Instruction address misaligned
+	defw	trap_handler_1	; Instruction access fault
+	defw	trap_handler_2	; Illegal instruction
+	defw	trap_handler_3		j	. 	; Breakpoint
+	defw	trap_handler_4		j 	. 	; Load address misaligned
+	defw 	trap_handler_5		j 	. 	; Load access fault
+	defw	trap_handler_6 		j	.	; Store address misaligned
+	defw	trap_handler_7		j	.	; Store access fault
+	defw	trap_handler_8				; Ecall
+
+trap_handler_0	j	.
 
 
 
