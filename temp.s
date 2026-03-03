@@ -1,20 +1,149 @@
-
 ;---------------------------------------------------------
-;       Exercise 3: Nesting Procedure Calls
+;       Exercise 4: System Calls
 ;       Maria-Ioana Dicu
-;       19 February 2026
+;       26 February 2026
 ;
-;       This programme prints 2 strings on the LCD display.
+;       "Hello world" programme modified to run as an
+;			application within a primitive OS
 ;       
 ;       External Libraries:
 ;       - uses DisplayOperations.s
 ;
 ;       Known bugs:
 ;       - none
-;
 ;---------------------------------------------------------
 
-                la      sp, stack_base      ; Set sp pointing to the end of our stack
+ORG		0x0000_0000
+J 		initialisation
+INCLUDE DisplayOperations.s                 ; Library with Display Operations
+
+;---------------------------------------------------------
+; OS SECTION - Machine mode
+;---------------------------------------------------------
+
+initialisation
+	li 		t0, 0x0000_1800		; Load MPP mask - bits 12 & 11
+	csrc	MSTATUS, t0			; Clear MPP bits in status
+	la 		t0, mhandler		; Point at trap handler code start
+	csrw 	MTVEC, t0			; Save address in system CSR
+	la 		t0, mstack_base		; Point at machine stack
+	csrw 	MSCRATCH, t0		; Copy 'machine' SP for use in handler
+	la 		sp, user_stack_base	; change SP to user space
+	la 		ra, user_code		; Point at user code start
+	csrw 	MEPC, ra			; Save as 'return address'
+	mret						; 'Return' to programme start
+
+mhandler
+	csrrw 	sp, MSCRATCH, sp	; Save user SP, get machine SP
+	subi 	sp, sp, 12			; Push working registers
+	sw		s1, 8[sp]
+	sw 		s0, 4[sp]
+	sw 		ra, 0[sp]
+
+	csrr 	t0, MCAUSE			; Read why we came here
+	andi 	t0, t0, 0xF			; Cautious - guarantees in range
+	la 		t1, trap_table		; Pointer to table
+	slli 	t0, t0, 2			; Multiply cause to word offset
+	add 	t1, t0, t1			; Index into table
+	lw 		t1, [t1]			; Get handler address
+	jr 		t1					; Call specific handler (RA is implicit)
+
+trap_table
+	defw	trap_handler_0		; Instruction address misaligned
+	defw	trap_handler_1		; Instruction access fault
+	defw	trap_handler_2		; Illegal instruction
+	defw	trap_handler_3  	; Breakpoint
+	defw	trap_handler_4		; Load address misaligned
+	defw 	trap_handler_5  	; Load access fault
+	defw	trap_handler_6 		; Store address misaligned
+	defw	trap_handler_7		; Store access fault
+	defw	trap_handler_8		; Environment call from U-mode
+	defw	trap_handler_9		; Environment call from S-mode
+	defw 	trap_handler_10		; Reserved
+	defw 	trap_handler_11 	; Environment call from M-mode
+	defw 	trap_handler_12 	; Instruction page fault
+	defw 	trap_handler_13 	; Load page fault
+	defw 	trap_handler_14 	; Reserved for future standard use
+	defw 	trap_handler_15 	; Store page fault
+
+trap_handler_0		j	.		; Instruction address misaligned
+trap_handler_1		j 	.		; Instruction access fault
+trap_handler_2		j 	.		; Illegal instruction
+trap_handler_3  	j 	. 		; Breakpoint
+trap_handler_4		j 	. 		; Load address misaligned
+trap_handler_5  	j 	. 		; Load access fault
+trap_handler_6 		j 	. 		; Store address misaligned
+trap_handler_7		j 	. 		; Store access fault
+
+trap_handler_8					; Environment call from U-mode
+	li		t0, ecall_max		; Check argument is legitimate
+	bgeu	a7, t0, ecall_range	; Out of range default
+	la 		t0, ecall_jump		; Point at table
+	slli	t1, a7, 2			; Calculate index (in words)
+	add 	t0, t0, t1			;
+	lw 		t0, [t0]			; Load address of service routine
+	jr 		t0					;  and jump to it
+
+ecall_jump
+	defw 	ecall_0				; Ecall for cleaning screen
+	defw	ecall_1				; Ecall for displaying a character
+	defw 	ecall_2				; Ecall for displaying a string
+	defw 	ecall_3 			; Ecall for going to next line on display
+
+trap_handler_9		j 	. 		; Environment call from S-mode
+trap_handler_10		j 	. 		; Reserved
+trap_handler_11 	j 	. 		; Environment call from M-mode
+trap_handler_12 	j 	. 		; Instruction page fault
+trap_handler_13 	j 	. 		; Load page fault
+trap_handler_14 	j	. 		; Reserved for future standard use
+trap_handler_15 	j	. 		; Store page fault
+
+
+ecall_range			j	. 		; It jumps here if out of range
+
+ecall_0
+	li 		a0, CLEAR_DIS
+	li 		a1, CLEAR_CTRL
+	call 	lcdSendCommand
+	j 		ecall_exit
+
+ecall_1	
+	call 	lcdSendCommand
+	j 		ecall_exit
+
+ecall_2
+	call 	printString
+	j 		ecall_exit
+
+ecall_3
+	call 	moveCursor
+	j 		ecall_exit
+
+ecall_max		EQU 	0b100
+
+
+ecall_exit
+	csrrw 	t0, MEPC, t0	; Find the trapping instruction PC
+	addi 	t0, t0, 4		; Correct to a return address
+	csrrw 	t0, MEPC, t0	; Swap back in
+
+	lw 		ra, [sp]		; Pop working registers
+	lw		s0, 4[sp]
+	lw		s1, 8[sp]
+	addi 	sp, sp, 12
+	csrrw 	sp, MSCRATCH, sp; Save Machine SP, get User SP
+	mret					; Return
+
+mstack 			defs	100
+mstack_base		align
+
+
+ORG		0x0004_0000
+;---------------------------------------------------------
+; USER SECTION
+;---------------------------------------------------------
+user_code
+                la      sp, user_stack_base      ; Set sp pointing to the end of our stack
                 j       START
 
 ; Defining names to aid readability
@@ -27,76 +156,8 @@ str1            defb    "Hello, world!\0"    ; String that we want to print
 str2            defb    "Happy birthday!\0"
                 align
 
-stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be used for the stack
-stack_base      align                       ; This label is 'just after' the stack base - FULL DESCENDING
-
-
-ORG		0x0000_0000
-
-
-;---------------------------------------------------------
-; OS SECTION - Machine mode
-;
-;---------------------------------------------------------
-
-initialisation
-	li t0, 0x0000_1800		; Load MPP mask - bits 12 & 11
-	csrc MSTATUS, t0		; Clear MPP bits in status
-	la t0, mhandler			; Point at trap handler code start
-	csrw MTVEC, t0			; Save address in system CSR
-	csrw MSCRATCH, sp		; Copy 'machine' SP for use in handler
-	la sp, user_stack		; change SP to user space
-	la ra, user_code		; Point at user code start
-	csrw MEPC, ra			; Save as 'return address'
-	mret					; 'Return' to programme start
-
-mhandler
-	csrrw sp, MSCRACTH, sp	; Save user SP, get machine SP
-	subi sp, sp, 12			; Push working registers
-	sw	s1, 8[sp]
-	sw 	s0, 4[sp]
-	sw 	ra, 0[sp]
-
-	cssr t0, MCAUSE			; Read why we came here
-	andi t0, t0, 0xF		; Cautious - guarantees in range
-	la t1, trap_table		; Pointer to table
-	slli t0, t0, 2			; Multiply cause to word offset
-	add t1, t0, t1			; Index into table
-	lw t1, [t1]				; Get handler address
-	jalr t1					; Call specific handler (RA is implicit)
-	; Can ret(urn) to here
-
-trap_table
-	defw	trap_handler_0	; Instruction address misaligned
-	defw	trap_handler_1	; Instruction access fault
-	defw	trap_handler_2	; Illegal instruction
-	defw	trap_handler_3		j	. 	; Breakpoint
-	defw	trap_handler_4		j 	. 	; Load address misaligned
-	defw 	trap_handler_5		j 	. 	; Load access fault
-	defw	trap_handler_6 		j	.	; Store address misaligned
-	defw	trap_handler_7		j	.	; Store access fault
-	defw	trap_handler_8				; Ecall
-
-trap_handler_0	j	.
-
-
-
-; A sys call should change privilege mode, jump to a service routine, save current PC and privilege mode  (PC- MEPC, Previous priv mode - MSTAUS) only after  rewrite current priviledge and jump to predefined handler
-ecall_handler				; The instruction has no arguments- other info needs to be passed (for example in registers) to specify the particular service required
-
-ecall_exit
-	csrrw t0, MEPC, t0		; Find the trapping instruction PC
-	addi t0, t0, 4			; Correct to a return address
-	csrrw t0, MEPC, t0		; Swap back in
-
-	lw ra, [sp]				; Pop working registers
-	lw	s0, 4[sp]
-	lw	s1, 8[sp]
-	addi sp, sp, 12
-	csrrw sp, MSCRATCH, sp	; Save Machine SP, get User SP
-	mret					; Return
-
-
+user_stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be used for the stack
+user_stack_base      align                       ; This label is 'just after' the stack base - FULL DESCENDING
 
 ; def start() - main function
 
@@ -105,24 +166,24 @@ ecall_exit
 
 START
     ; Clearing the display - we're calling lcdSendCommand for this but with the special clearing signals
-    li a0, CLEAR_DIS
-    li a1, CLEAR_CTRL
-    call lcdSendCommand
+    li 		a7, 0
+	ecall
 
     ; calling printString function with string1 as argument
-    la a0, str1
-    call printString
+    la 		a0, str1
+	li 		a7, 2
+	ecall
 
     ; calling the function to move the cursor to the next line of display
-    call moveCursor
+    li 		a7, 3
+	ecall
 
     ; calling printString function with string1 as argument
-    la a0, str2
-    call printString
+    la 		a0, str2
+	li 		a7, 2
+    ecall
 
 J END
 
-INCLUDE DisplayOperations.s                 ; Library with Display Operations
 
 END J . ; infinite loop to stop the program
-
