@@ -23,7 +23,7 @@
 LCD_DATA        EQU     0x0001_0100         ; address where we write display data
 LCD_CONTROL     EQU     0x0001_0101         ; address where we write control signals for the display
 MASK7           EQU     0x80                ; mask used to find wether bit 7 set with an AND operaton
-DELAY           EQU     0x009690            ; delay used in the counter
+DELAY           EQU     0x000690            ; delay used in the counter
 WRITE_CTRL      EQU     0b1010              ; controls when we want to write a character to the display
 SHIFT_NEXT      EQU     0b1100_0000         ; DB7-DB0 data to move cursor to next line
 MASKPRINT       EQU     0b1111

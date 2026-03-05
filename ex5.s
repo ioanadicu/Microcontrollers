@@ -92,9 +92,11 @@ ecall_jump
 	defw 	ecall_4				; Initialising counter
 	defw 	ecall_5				; Getting buttons
 	defw 	ecall_6				; Getting Status register bits
-	defw 	ecall_7
-	defw 	ecall_8
-	defw 	ecall_9
+	defw 	ecall_7				; Print Hex
+	defw 	ecall_8				; bit 31 reset
+	defw 	ecall_9				; Print decimal
+	defw 	ecall_10			; Pause timer
+	defw 	ecall_11 			; Resume timer
 
 trap_handler_9		j 	. 		; Environment call from S-mode
 trap_handler_10		j 	. 		; Reserved
@@ -158,7 +160,17 @@ ecall_9
 	call 	PrintDecU32
 	j 		ecall_exit
 
-ecall_max		EQU 	0x10
+ecall_10
+	li 		t0, 0b1
+	li		t1, TIME_PERIPH
+	sw		t0, 0x10[t1]
+
+ecall_11
+	li 		t0, 0b1
+	li		t1, TIME_PERIPH
+	sw		t0, 0x14[t1]
+
+ecall_max		EQU 	0x12
 
 
 ecall_exit
@@ -189,18 +201,23 @@ user_code
 CLEAR_DIS       EQU     0b0000_0001         ; DB7-DB0 data to clear the display
 CLEAR_CTRL      EQU     0b1000              ; Controls when we want to clear the display
 
-SECOND 			EQU 	0x98967F
+;SECOND 			EQU 	0x98967F
+SECOND 			EQU 	0x18967F
 TIME_PERIPH		EQU		0x0001_0200
 REGINIT			EQU		0b11
 BUTTONS			EQU		0x0001_0001
 BTTN1			EQU 	0b0001
 BTTN2 			EQU     0b0010
+BTTN3 			EQU 	0b0100
 OFFSETSTAT		EQU     0x0C
 
-str1            defb    "Hello, world!\0"    ; String that we want to print
+str1            defb    "SW1 to start\0"    ; String that we want to print
                 align
 
-str2            defb    "Happy birthday!\0"
+str2            defb    "Current time: \0"
+                align
+
+str3            defb    "On pause.\0"
                 align
 
 user_stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be used for the stack
@@ -212,8 +229,7 @@ user_stack_base      align                       ; This label is 'just after' th
 ; - only uses a0, a1 to pass function parameters
 
 START
-
-    ; Clearing the display - we're calling lcdSendCommand for this but with the special clearing signals
+	; Clearing the display - we're calling lcdSendCommand for this but with the special clearing signals
     li 		a7, 0
 	ecall
 
@@ -222,63 +238,98 @@ START
 	li 		a7, 2
 	ecall
 
-    ; calling the function to move the cursor to the next line of display
-    li 		a7, 3
-	ecall
-
-    ; calling printString function with string1 as argument
-    la 		a0, str2
-	li 		a7, 2
-    ecall
-
-	; Clearing the display - we're calling lcdSendCommand for this but with the special clearing signals
-    li 		a7, 0
-	ecall
-
-	;li 		a0, 0x3132
-	;li 		a7, 7
-	;ecall
-
-
-	; initialisation
-	li		a6, 1
-	li		a7, 4
-	ecall
-
 waitUntilBttn
 	li 		a7, 5
 	ecall
 	
 	andi	a0, a0, BTTN1			; Check if button 1 is pressed so we can start our loop
 	beqz	a0, waitUntilBttn
-	j 		waitUntilReached
+
+resetCounter
+	li		s0, 0
 	
+	li		a7, 4
+	ecall
+
+	li 		a7, 0
+	ecall							;clear sc
+
+	la 		a0, str2				; print string
+	li 		a7, 2
+	ecall
+
+	mv      a0, s0
+	li      a7, 9					; print decimal
+	ecall
+
 waitUntilReached
 
 checkPause
+	; check if pause button SW2 is pressed
 	li		a7, 5
 	ecall 
-
 	andi    a0, a0, BTTN2
-	bnez    a0, Paused
+	bnez    a0, paused
 
 	li		a7, 6
 	ecall
 	
 	bgez	a0, waitUntilReached	; Chekcing bit 31 if 1 (completed a loop) else 
 	
-	addi	a6, a6, 0b1
-	li 		a7, 8
+	addi	s0, s0, 0b1
+	li 		a7, 8					; bit 31 reset
 	ecall
 
-	mv      a0, a6
-	li      a7, 9
+	li 		a7, 0
+	ecall							;clear sc
+
+	la 		a0, str2				; print string
+	li 		a7, 2
+	ecall
+
+	mv      a0, s0
+	li      a7, 9					; print decimal
 	ecall
 
 	j waitUntilReached
 
-Paused
-	j		. 
+paused
+
+	;disable clock
+	li 		a7, 10					; deenable clock
+	ecall
+
+	li 		a7, 0
+	ecall							;clear sc
+
+	la 		a0, str3				; print string
+	li 		a7, 2
+	ecall
+
+
+next_state
+	; check if pause button SW2 is pressed
+	li		a7, 5
+	ecall 
+	andi    a0, a0, BTTN1
+	beqz    a0, chkrst
+
+	; enable clock
+	li 		a7, 11
+	ecall
+
+	j waitUntilReached
+
+chkrst
+	; check if pause button SW3 is pressed
+	li		a7, 5
+	ecall 
+	andi    a0, a0, BTTN3
+	beqz    a0, next_state
+
+	j 		START
+
+	j paused
 
 J END
 
