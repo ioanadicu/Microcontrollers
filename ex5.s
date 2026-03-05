@@ -211,13 +211,35 @@ BTTN2 			EQU     0b0010
 BTTN3 			EQU 	0b0100
 OFFSETSTAT		EQU     0x0C
 
-str1            defb    "SW1 to start\0"    ; String that we want to print
+str1            defb    "Press button SW1\0"    ; String that we want to print
                 align
 
-str2            defb    "Current time: \0"
+str11           defb    " to start.\0"    ; String that we want to print
+                align
+
+
+strw            defb    "Current time: \0"
                 align
 
 str3            defb    "On pause.\0"
+                align
+
+strh            defb    "h \0"
+                align
+
+strm            defb    "m \0"
+                align
+
+strs            defb    "s \0"
+                align
+
+strp1           defb    "Pause SW1-Resume\0"
+                align
+
+strp2           defb    "      SW3-Reset \0"
+                align
+
+str2            defb    "Time passed:\0"
                 align
 
 user_stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be used for the stack
@@ -228,6 +250,10 @@ user_stack_base      align                       ; This label is 'just after' th
 ; local variables
 ; - only uses a0, a1 to pass function parameters
 
+; s0 - seconds
+; s1 = minutes
+; s2 = hours
+
 START
 	; Clearing the display - we're calling lcdSendCommand for this but with the special clearing signals
     li 		a7, 0
@@ -235,6 +261,13 @@ START
 
     ; calling printString function with string1 as argument
     la 		a0, str1
+	li 		a7, 2
+	ecall
+
+	li		a7, 3					; next line
+	ecall
+
+	la 		a0, str11
 	li 		a7, 2
 	ecall
 
@@ -247,6 +280,8 @@ waitUntilBttn
 
 resetCounter
 	li		s0, 0
+	li		s1, 0
+	li 		s2, 0
 	
 	li		a7, 4
 	ecall
@@ -254,12 +289,35 @@ resetCounter
 	li 		a7, 0
 	ecall							;clear sc
 
-	la 		a0, str2				; print string
+	la 		a0, strw
+	li 		a7, 2
+	ecall
+
+	li		a7, 3					; next line
+	ecall
+	
+	mv      a0, s2
+	li      a7, 9					; print hours
+	ecall
+
+	la 		a0, strh				; print string
+	li 		a7, 2
+	ecall
+
+	mv      a0, s1
+	li      a7, 9					; print hours
+	ecall
+
+	la 		a0, strm				; print string
 	li 		a7, 2
 	ecall
 
 	mv      a0, s0
-	li      a7, 9					; print decimal
+	li      a7, 9					; print hours
+	ecall
+
+	la 		a0, strs				; print string
+	li 		a7, 2
 	ecall
 
 waitUntilReached
@@ -275,20 +333,58 @@ checkPause
 	ecall
 	
 	bgez	a0, waitUntilReached	; Chekcing bit 31 if 1 (completed a loop) else 
-	
-	addi	s0, s0, 0b1
+
 	li 		a7, 8					; bit 31 reset
 	ecall
+
+	; check if seconds > 60
+	addi	s0, s0, 0b1
+	li		t0, 0x3C
+	blt		s0, t0, nomod
+
+	subi 	s0, s0, 0x3C
+	addi 	s1, s1, 0b1
+
+	; check if minutes > 60
+	blt 	s1, t0, nomod
+	subi 	s1, s1, 0x3C
+	addi 	s2, s2, 0b1
+
+nomod	
 
 	li 		a7, 0
 	ecall							;clear sc
 
-	la 		a0, str2				; print string
+
+	la 		a0, strw
+	li 		a7, 2
+	ecall
+
+	li		a7, 3					; next line
+	ecall
+
+	mv      a0, s2
+	li      a7, 9					; print hours
+	ecall
+
+	la 		a0, strh				; print string
+	li 		a7, 2
+	ecall
+
+	mv      a0, s1
+	li      a7, 9					; print hours
+	ecall
+
+	la 		a0, strm				; print string
 	li 		a7, 2
 	ecall
 
 	mv      a0, s0
-	li      a7, 9					; print decimal
+	li      a7, 9					; print hours
+	ecall
+
+	la 		a0, strs				; print string
+	li 		a7, 2
 	ecall
 
 	j waitUntilReached
@@ -302,10 +398,16 @@ paused
 	li 		a7, 0
 	ecall							;clear sc
 
-	la 		a0, str3				; print string
+	la 		a0, strp1				; print string
 	li 		a7, 2
 	ecall
 
+	li		a7, 3					; next line
+	ecall
+
+	la 		a0, strp2				; print string
+	li 		a7, 2
+	ecall
 
 next_state
 	; check if pause button SW2 is pressed

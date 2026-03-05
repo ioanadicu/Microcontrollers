@@ -375,7 +375,7 @@ KMD
 00000268: 25C28293    ; 
 0000026C: 34029073    ;         csrw    MSCRATCH, t0            ; Copy 'machine' SP for use in handler
 00000270: 00040117    ;         la              sp, user_stack_base     ; change SP to user space
-00000274: E2C10113    ; 
+00000274: E8010113    ; 
 00000278: 00040097    ;         la              ra, user_code           ; Point at user code start
 0000027C: D8808093    ; 
 00000280: 34109073    ;         csrw    MEPC, ra                        ; Save as 'return address'
@@ -553,8 +553,8 @@ KMD
 00040000:             ; ;---------------------------------------------------------
 00040000:             ; user_code
 00040000: 00000117    ;                 la      sp, user_stack_base      ; Set sp pointing to the end of our stack
-00040004: 09C10113    ; 
-00040008: 0940006F    ;                 j       START
+00040004: 0F010113    ; 
+00040008: 0E80006F    ;                 j       START
 0004000C:             ; 
 0004000C:             ; ; Defining names to aid readability
 0004000C:             ; CLEAR_DIS       EQU     0b0000_0001         ; DB7-DB0 data to clear the display
@@ -570,148 +570,272 @@ KMD
 0004000C:             ; BTTN3                   EQU     0b0100
 0004000C:             ; OFFSETSTAT              EQU     0x0C
 0004000C:             ; 
-0004000C: 53 57 31 20 ; str1            defb    "SW1 to start\0"    ; String that we want to print
-00040010: 74 6F 20 73 ; 
-00040014: 74 61 72 74 ; 
-00040018: 00          ; 
-0004001C:             ;                 align
-0004001C:             ; 
-0004001C: 43 75 72 72 ; str2            defb    "Current time: \0"
-00040020: 65 6E 74 20 ; 
-00040024: 74 69 6D 65 ; 
-00040028: 3A 20 00    ; 
+0004000C: 50 72 65 73 ; str1            defb    "Press button SW1\0"    ; String that we want to print
+00040010: 73 20 62 75 ; 
+00040014: 74 74 6F 6E ; 
+00040018: 20 53 57 31 ; 
+0004001C: 00          ; 
+00040020:             ;                 align
+00040020:             ; 
+00040020: 20 74 6F 20 ; str11           defb    " to start.\0"    ; String that we want to print
+00040024: 73 74 61 72 ; 
+00040028: 74 2E 00    ; 
 0004002C:             ;                 align
 0004002C:             ; 
-0004002C: 4F 6E 20 70 ; str3            defb    "On pause.\0"
-00040030: 61 75 73 65 ; 
-00040034: 2E 00       ; 
-00040038:             ;                 align
-00040038:             ; 
-00040038:             ; user_stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be
+0004002C:             ; 
+0004002C: 43 75 72 72 ; strw            defb    "Current time: \0"
+00040030: 65 6E 74 20 ; 
+00040034: 74 69 6D 65 ; 
+00040038: 3A 20 00    ; 
+0004003C:             ;                 align
+0004003C:             ; 
+0004003C: 4F 6E 20 70 ; str3            defb    "On pause.\0"
+00040040: 61 75 73 65 ; 
+00040044: 2E 00       ; 
+00040048:             ;                 align
+00040048:             ; 
+00040048: 68 20 00    ; strh            defb    "h \0"
+0004004C:             ;                 align
+0004004C:             ; 
+0004004C: 6D 20 00    ; strm            defb    "m \0"
+00040050:             ;                 align
+00040050:             ; 
+00040050: 73 20 00    ; strs            defb    "s \0"
+00040054:             ;                 align
+00040054:             ; 
+00040054: 50 61 75 73 ; strp1           defb    "Pause SW1-Resume\0"
+00040058: 65 20 53 57 ; 
+0004005C: 31 2D 52 65 ; 
+00040060: 73 75 6D 65 ; 
+00040064: 00          ; 
+00040068:             ;                 align
+00040068:             ; 
+00040068: 20 20 20 20 ; strp2           defb    "      SW3-Reset \0"
+0004006C: 20 20 53 57 ; 
+00040070: 33 2D 52 65 ; 
+00040074: 73 65 74 20 ; 
+00040078: 00          ; 
+0004007C:             ;                 align
+0004007C:             ; 
+0004007C: 54 69 6D 65 ; str2            defb    "Time passed:\0"
+00040080: 20 70 61 73 ; 
+00040084: 73 65 64 3A ; 
+00040088: 00          ; 
+0004008C:             ;                 align
+0004008C:             ; 
+0004008C:             ; user_stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be
                       ;  used for the stack
-0004009C:             ; user_stack_base      align                       ; This label is 'just after' the stack base - 
+000400F0:             ; user_stack_base      align                       ; This label is 'just after' the stack base - 
                       ; FULL DESCENDING
-0004009C:             ; 
-0004009C:             ; ; def start() - main function
-0004009C:             ; 
-0004009C:             ; ; local variables
-0004009C:             ; ; - only uses a0, a1 to pass function parameters
-0004009C:             ; 
-0004009C:             ; START
-0004009C:             ;         ; Clearing the display - we're calling lcdSendCommand for this but with the special cle
+000400F0:             ; 
+000400F0:             ; ; def start() - main function
+000400F0:             ; 
+000400F0:             ; ; local variables
+000400F0:             ; ; - only uses a0, a1 to pass function parameters
+000400F0:             ; 
+000400F0:             ; ; s0 - seconds
+000400F0:             ; ; s1 = minutes
+000400F0:             ; ; s2 = hours
+000400F0:             ; 
+000400F0:             ; START
+000400F0:             ;         ; Clearing the display - we're calling lcdSendCommand for this but with the special cle
                       ; aring signals
-0004009C: 00000893    ;     li          a7, 0
-000400A0: 00000073    ;         ecall
-000400A4:             ; 
-000400A4:             ;     ; calling printString function with string1 as argument
-000400A4: 00000517    ;     la          a0, str1
-000400A8: F6850513    ; 
-000400AC: 00200893    ;         li              a7, 2
-000400B0: 00000073    ;         ecall
-000400B4:             ; 
-000400B4:             ; waitUntilBttn
-000400B4: 00500893    ;         li              a7, 5
-000400B8: 00000073    ;         ecall
-000400BC:             ;         
-000400BC: 00157513    ;         andi    a0, a0, BTTN1                   ; Check if button 1 is pressed so we can start 
+000400F0: 00000893    ;     li          a7, 0
+000400F4: 00000073    ;         ecall
+000400F8:             ; 
+000400F8:             ;     ; calling printString function with string1 as argument
+000400F8: 00000517    ;     la          a0, str1
+000400FC: F1450513    ; 
+00040100: 00200893    ;         li              a7, 2
+00040104: 00000073    ;         ecall
+00040108:             ; 
+00040108: 00300893    ;         li              a7, 3                                   ; next line
+0004010C: 00000073    ;         ecall
+00040110:             ; 
+00040110: 00000517    ;         la              a0, str11
+00040114: F1050513    ; 
+00040118: 00200893    ;         li              a7, 2
+0004011C: 00000073    ;         ecall
+00040120:             ; 
+00040120:             ; waitUntilBttn
+00040120: 00500893    ;         li              a7, 5
+00040124: 00000073    ;         ecall
+00040128:             ;         
+00040128: 00157513    ;         andi    a0, a0, BTTN1                   ; Check if button 1 is pressed so we can start 
                       ; our loop
-000400C0: FE050AE3    ;         beqz    a0, waitUntilBttn
-000400C4:             ; 
-000400C4:             ; resetCounter
-000400C4: 00000413    ;         li              s0, 0
-000400C8:             ;         
-000400C8: 00400893    ;         li              a7, 4
-000400CC: 00000073    ;         ecall
-000400D0:             ; 
-000400D0: 00000893    ;         li              a7, 0
-000400D4: 00000073    ;         ecall                                                   ;clear sc
-000400D8:             ; 
-000400D8: 00000517    ;         la              a0, str2                                ; print string
-000400DC: F4450513    ; 
-000400E0: 00200893    ;         li              a7, 2
-000400E4: 00000073    ;         ecall
-000400E8:             ; 
-000400E8: 00040513    ;         mv      a0, s0
-000400EC: 00900893    ;         li      a7, 9                                   ; print decimal
-000400F0: 00000073    ;         ecall
-000400F4:             ; 
-000400F4:             ; waitUntilReached
-000400F4:             ; 
-000400F4:             ; checkPause
-000400F4:             ;         ; check if pause button SW2 is pressed
-000400F4: 00500893    ;         li              a7, 5
-000400F8: 00000073    ;         ecall 
-000400FC: 00257513    ;         andi    a0, a0, BTTN2
-00040100: 04051263    ;         bnez    a0, paused
-00040104:             ; 
-00040104: 00600893    ;         li              a7, 6
-00040108: 00000073    ;         ecall
-0004010C:             ;         
-0004010C: FE0554E3    ;         bgez    a0, waitUntilReached    ; Chekcing bit 31 if 1 (completed a loop) else 
-00040110:             ;         
-00040110: 00140413    ;         addi    s0, s0, 0b1
-00040114: 00800893    ;         li              a7, 8                                   ; bit 31 reset
-00040118: 00000073    ;         ecall
-0004011C:             ; 
-0004011C: 00000893    ;         li              a7, 0
-00040120: 00000073    ;         ecall                                                   ;clear sc
-00040124:             ; 
-00040124: 00000517    ;         la              a0, str2                                ; print string
-00040128: EF850513    ; 
-0004012C: 00200893    ;         li              a7, 2
-00040130: 00000073    ;         ecall
-00040134:             ; 
-00040134: 00040513    ;         mv      a0, s0
-00040138: 00900893    ;         li      a7, 9                                   ; print decimal
-0004013C: 00000073    ;         ecall
-00040140:             ; 
-00040140: FB5FF06F    ;         j waitUntilReached
+0004012C: FE050AE3    ;         beqz    a0, waitUntilBttn
+00040130:             ; 
+00040130:             ; resetCounter
+00040130: 00000413    ;         li              s0, 0
+00040134: 00000493    ;         li              s1, 0
+00040138: 00000913    ;         li              s2, 0
+0004013C:             ;         
+0004013C: 00400893    ;         li              a7, 4
+00040140: 00000073    ;         ecall
 00040144:             ; 
-00040144:             ; paused
-00040144:             ; 
-00040144:             ;         ;disable clock
-00040144: 00A00893    ;         li              a7, 10                                  ; deenable clock
-00040148: 00000073    ;         ecall
+00040144: 00000893    ;         li              a7, 0
+00040148: 00000073    ;         ecall                                                   ;clear sc
 0004014C:             ; 
-0004014C: 00000893    ;         li              a7, 0
-00040150: 00000073    ;         ecall                                                   ;clear sc
-00040154:             ; 
-00040154: 00000517    ;         la              a0, str3                                ; print string
-00040158: ED850513    ; 
-0004015C: 00200893    ;         li              a7, 2
+0004014C: 00000517    ;         la              a0, strw
+00040150: EE050513    ; 
+00040154: 00200893    ;         li              a7, 2
+00040158: 00000073    ;         ecall
+0004015C:             ; 
+0004015C: 00300893    ;         li              a7, 3                                   ; next line
 00040160: 00000073    ;         ecall
-00040164:             ; 
-00040164:             ; 
-00040164:             ; next_state
-00040164:             ;         ; check if pause button SW2 is pressed
-00040164: 00500893    ;         li              a7, 5
-00040168: 00000073    ;         ecall 
-0004016C: 00157513    ;         andi    a0, a0, BTTN1
-00040170: 00050863    ;         beqz    a0, chkrst
-00040174:             ; 
-00040174:             ;         ; enable clock
-00040174: 00B00893    ;         li              a7, 11
-00040178: 00000073    ;         ecall
-0004017C:             ; 
-0004017C: F79FF06F    ;         j waitUntilReached
+00040164:             ;         
+00040164: 00090513    ;         mv      a0, s2
+00040168: 00900893    ;         li      a7, 9                                   ; print hours
+0004016C: 00000073    ;         ecall
+00040170:             ; 
+00040170: 00000517    ;         la              a0, strh                                ; print string
+00040174: ED850513    ; 
+00040178: 00200893    ;         li              a7, 2
+0004017C: 00000073    ;         ecall
 00040180:             ; 
-00040180:             ; chkrst
-00040180:             ;         ; check if pause button SW3 is pressed
-00040180: 00500893    ;         li              a7, 5
-00040184: 00000073    ;         ecall 
-00040188: 00457513    ;         andi    a0, a0, BTTN3
-0004018C: FC050CE3    ;         beqz    a0, next_state
-00040190:             ; 
-00040190: F0DFF06F    ;         j               START
-00040194:             ; 
-00040194: FB1FF06F    ;         j paused
-00040198:             ; 
-00040198: 0040006F    ; J END
+00040180: 00048513    ;         mv      a0, s1
+00040184: 00900893    ;         li      a7, 9                                   ; print hours
+00040188: 00000073    ;         ecall
+0004018C:             ; 
+0004018C: 00000517    ;         la              a0, strm                                ; print string
+00040190: EC050513    ; 
+00040194: 00200893    ;         li              a7, 2
+00040198: 00000073    ;         ecall
 0004019C:             ; 
-0004019C:             ; 
-0004019C:             ; 
-0004019C: 0000006F    ; END J . ; infinite loop to stop the program
-000401A0:             ; 
+0004019C: 00040513    ;         mv      a0, s0
+000401A0: 00900893    ;         li      a7, 9                                   ; print hours
+000401A4: 00000073    ;         ecall
+000401A8:             ; 
+000401A8: 00000517    ;         la              a0, strs                                ; print string
+000401AC: EA850513    ; 
+000401B0: 00200893    ;         li              a7, 2
+000401B4: 00000073    ;         ecall
+000401B8:             ; 
+000401B8:             ; waitUntilReached
+000401B8:             ; 
+000401B8:             ; checkPause
+000401B8:             ;         ; check if pause button SW2 is pressed
+000401B8: 00500893    ;         li              a7, 5
+000401BC: 00000073    ;         ecall 
+000401C0: 00257513    ;         andi    a0, a0, BTTN2
+000401C4: 0A051863    ;         bnez    a0, paused
+000401C8:             ; 
+000401C8: 00600893    ;         li              a7, 6
+000401CC: 00000073    ;         ecall
+000401D0:             ;         
+000401D0: FE0554E3    ;         bgez    a0, waitUntilReached    ; Chekcing bit 31 if 1 (completed a loop) else 
+000401D4:             ; 
+000401D4: 00800893    ;         li              a7, 8                                   ; bit 31 reset
+000401D8: 00000073    ;         ecall
+000401DC:             ; 
+000401DC:             ;         ; check if seconds > 60
+000401DC: 00140413    ;         addi    s0, s0, 0b1
+000401E0: 03C00293    ;         li              t0, 0x3C
+000401E4: 00544C63    ;         blt             s0, t0, nomod
+000401E8:             ; 
+000401E8: FC440413    ;         subi    s0, s0, 0x3C
+000401EC: 00148493    ;         addi    s1, s1, 0b1
+000401F0:             ; 
+000401F0:             ;         ; check if minutes > 60
+000401F0: 0054C663    ;         blt     s1, t0, nomod
+000401F4: FC448493    ;         subi    s1, s1, 0x3C
+000401F8: 00190913    ;         addi    s2, s2, 0b1
+000401FC:             ; 
+000401FC:             ; nomod   
+000401FC:             ; 
+000401FC: 00000893    ;         li              a7, 0
+00040200: 00000073    ;         ecall                                                   ;clear sc
+00040204:             ; 
+00040204:             ; 
+00040204: 00000517    ;         la              a0, strw
+00040208: E2850513    ; 
+0004020C: 00200893    ;         li              a7, 2
+00040210: 00000073    ;         ecall
+00040214:             ; 
+00040214: 00300893    ;         li              a7, 3                                   ; next line
+00040218: 00000073    ;         ecall
+0004021C:             ; 
+0004021C: 00090513    ;         mv      a0, s2
+00040220: 00900893    ;         li      a7, 9                                   ; print hours
+00040224: 00000073    ;         ecall
+00040228:             ; 
+00040228: 00000517    ;         la              a0, strh                                ; print string
+0004022C: E2050513    ; 
+00040230: 00200893    ;         li              a7, 2
+00040234: 00000073    ;         ecall
+00040238:             ; 
+00040238: 00048513    ;         mv      a0, s1
+0004023C: 00900893    ;         li      a7, 9                                   ; print hours
+00040240: 00000073    ;         ecall
+00040244:             ; 
+00040244: 00000517    ;         la              a0, strm                                ; print string
+00040248: E0850513    ; 
+0004024C: 00200893    ;         li              a7, 2
+00040250: 00000073    ;         ecall
+00040254:             ; 
+00040254: 00040513    ;         mv      a0, s0
+00040258: 00900893    ;         li      a7, 9                                   ; print hours
+0004025C: 00000073    ;         ecall
+00040260:             ; 
+00040260: 00000517    ;         la              a0, strs                                ; print string
+00040264: DF050513    ; 
+00040268: 00200893    ;         li              a7, 2
+0004026C: 00000073    ;         ecall
+00040270:             ; 
+00040270: F49FF06F    ;         j waitUntilReached
+00040274:             ; 
+00040274:             ; paused
+00040274:             ; 
+00040274:             ;         ;disable clock
+00040274: 00A00893    ;         li              a7, 10                                  ; deenable clock
+00040278: 00000073    ;         ecall
+0004027C:             ; 
+0004027C: 00000893    ;         li              a7, 0
+00040280: 00000073    ;         ecall                                                   ;clear sc
+00040284:             ; 
+00040284: 00000517    ;         la              a0, strp1                               ; print string
+00040288: DD050513    ; 
+0004028C: 00200893    ;         li              a7, 2
+00040290: 00000073    ;         ecall
+00040294:             ; 
+00040294: 00300893    ;         li              a7, 3                                   ; next line
+00040298: 00000073    ;         ecall
+0004029C:             ; 
+0004029C: 00000517    ;         la              a0, strp2                               ; print string
+000402A0: DCC50513    ; 
+000402A4: 00200893    ;         li              a7, 2
+000402A8: 00000073    ;         ecall
+000402AC:             ; 
+000402AC:             ; next_state
+000402AC:             ;         ; check if pause button SW2 is pressed
+000402AC: 00500893    ;         li              a7, 5
+000402B0: 00000073    ;         ecall 
+000402B4: 00157513    ;         andi    a0, a0, BTTN1
+000402B8: 00050863    ;         beqz    a0, chkrst
+000402BC:             ; 
+000402BC:             ;         ; enable clock
+000402BC: 00B00893    ;         li              a7, 11
+000402C0: 00000073    ;         ecall
+000402C4:             ; 
+000402C4: EF5FF06F    ;         j waitUntilReached
+000402C8:             ; 
+000402C8:             ; chkrst
+000402C8:             ;         ; check if pause button SW3 is pressed
+000402C8: 00500893    ;         li              a7, 5
+000402CC: 00000073    ;         ecall 
+000402D0: 00457513    ;         andi    a0, a0, BTTN3
+000402D4: FC050CE3    ;         beqz    a0, next_state
+000402D8:             ; 
+000402D8: E19FF06F    ;         j               START
+000402DC:             ; 
+000402DC: F99FF06F    ;         j paused
+000402E0:             ; 
+000402E0: 0040006F    ; J END
+000402E4:             ; 
+000402E4:             ; 
+000402E4:             ; 
+000402E4: 0000006F    ; END J . ; infinite loop to stop the program
+000402E8:             ; 
 
 Symbol Table: Labels
 : LCD_DATA                          00010100  Value
@@ -788,16 +912,24 @@ Symbol Table: Labels
 : BTTN3                             00000004  Value
 : OFFSETSTAT                        0000000C  Value
 : str1                              0004000C  Label
-: str2                              0004001C  Label
-: str3                              0004002C  Label
-: user_stack                        00040038  Label
-: user_stack_base                   0004009C  Label
-: START                             0004009C  Label
-: waitUntilBttn                     000400B4  Label
-: resetCounter                      000400C4  Label
-: waitUntilReached                  000400F4  Label
-: checkPause                        000400F4  Label
-: paused                            00040144  Label
-: next_state                        00040164  Label
-: chkrst                            00040180  Label
-: END                               0004019C  Label
+: str11                             00040020  Label
+: strw                              0004002C  Label
+: str3                              0004003C  Label
+: strh                              00040048  Label
+: strm                              0004004C  Label
+: strs                              00040050  Label
+: strp1                             00040054  Label
+: strp2                             00040068  Label
+: str2                              0004007C  Label
+: user_stack                        0004008C  Label
+: user_stack_base                   000400F0  Label
+: START                             000400F0  Label
+: waitUntilBttn                     00040120  Label
+: resetCounter                      00040130  Label
+: waitUntilReached                  000401B8  Label
+: checkPause                        000401B8  Label
+: nomod                             000401FC  Label
+: paused                            00040274  Label
+: next_state                        000402AC  Label
+: chkrst                            000402C8  Label
+: END                               000402E4  Label
