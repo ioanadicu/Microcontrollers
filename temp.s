@@ -89,6 +89,8 @@ ecall_jump
 	defw	ecall_1				; Ecall for displaying a character
 	defw 	ecall_2				; Ecall for displaying a string
 	defw 	ecall_3 			; Ecall for going to next line on display
+	defw 	ecall_4				; Initialising counter
+	defw 	ecall_5				; Getting buttons
 
 trap_handler_9		j 	. 		; Environment call from S-mode
 trap_handler_10		j 	. 		; Reserved
@@ -119,7 +121,19 @@ ecall_3
 	call 	moveCursor
 	j 		ecall_exit
 
-ecall_max		EQU 	0b100
+ecall_4
+	li 	    t0, SECOND			; Setting the limit
+	li 		t1, TIME_PERIPH
+	sw		t0, 0x4[t1]
+	
+	li 		t0, REGINIT
+	sw 		t0, 0x14[t1]	
+
+ecall_5
+	li 		t0, BUTTONS
+	lb		a0, [t0]
+
+ecall_max		EQU 	0x6
 
 
 ecall_exit
@@ -150,6 +164,14 @@ user_code
 CLEAR_DIS       EQU     0b0000_0001         ; DB7-DB0 data to clear the display
 CLEAR_CTRL      EQU     0b1000              ; Controls when we want to clear the display
 
+SECOND 			EQU 	0x98967F
+TIME_PERIPH		EQU		0x0001_0200
+REGINIT			EQU		0b11
+BUTTONS			EQU		0x0001_0001
+BTTN1			EQU 	0b0001
+BTTN2 			EQU     0b0010
+OFFSETSTAT		EQU     0x0C
+
 str1            defb    "Hello, world!\0"    ; String that we want to print
                 align
 
@@ -165,6 +187,7 @@ user_stack_base      align                       ; This label is 'just after' th
 ; - only uses a0, a1 to pass function parameters
 
 START
+
     ; Clearing the display - we're calling lcdSendCommand for this but with the special clearing signals
     li 		a7, 0
 	ecall
@@ -183,7 +206,40 @@ START
 	li 		a7, 2
     ecall
 
+
+
+		; initialisation
+	li		a7, 4
+	ecall
+
+waitUntilBttn
+	li 		a7, 5
+	ecall
+	
+	andi	a0, a0, BTTN1			; Check if button 1 is pressed so we can start our loop
+	beqz	a0, waitUntilBttn
+	j 		waitUntilReached
+	
+waitUntilReached
+
+checkPause
+	li		a7, 5
+	ecall 
+
+	andi    a0, a0, BTTN2
+	bnez    a0, Paused
+
+	; li		t0, TIME_PERIPH
+	; lw 		t1, OFFSETSTAT[t0]
+	bgez	t1, waitUntilReached	; Chekcing bit 31 if 1 (completed a loop) else 
+	
+
+
+Paused
+	j		. 
+
 J END
+
 
 
 END J . ; infinite loop to stop the program
