@@ -239,51 +239,8 @@ loop_point
 
 
 
-
-; printing hex
-; a0 - number
-
-PrintHex8
-    subi    sp, sp, 8
-    sw      ra,  4[sp]  ; caller saved - I save it here and use it at the end of the function 
-    sw      s0,  0[sp]  ; s register calee saved - saving it before executing anything and restoring when done
-
-    mv      s0, a0              ; Make a copy of the input
-    srli    a0, a0, 0x4         ; Shift right 4 places
-    call    printHex4
-    mv      a0, s0              ; Restore value from the copy
-    call    printHex4
-
-    ; Getting ra back and the callee saved registers
-    lw      s0,  0[sp]
-    lw      ra,  4[sp]
-    addi    sp, sp, 8
-
-    jr ra
-
-printHex4
-    subi    sp, sp, 4
-    sw      ra,  0[sp]  ; caller saved - I save it here and use it at the end of the function 
-
-    andi    a0, a0, MASKPRINT   ; Mask off everything except lower 4 bits
-    li      t0, 0x9      
-    bgt     a0, t0, addition    ; if a0 > 9
-    addi    a0, a0, '0'
-    j       calling
-addition
-    addi    a0, a0, AMIN
-calling
-    li      a1, WRITE_CTRL   ; will be used as function argument in writeString
-    call    lcdSendCommand
-
-    lw      ra,  0[sp]
-    addi    sp, sp, 4
-
-    jr      ra
-
-
-
-PrintDecU32
+; def printdec
+printDec
     subi    sp, sp, 12
     sw      ra,  8[sp]
     sw      s0,  4[sp]

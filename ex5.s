@@ -157,7 +157,7 @@ ecall_8
 	j 		ecall_exit
 
 ecall_9
-	call 	PrintDecU32
+	call 	printDec
 	j 		ecall_exit
 
 ecall_10
@@ -295,7 +295,7 @@ resetCounter
 
 	li		a7, 3					; next line
 	ecall
-	
+
 	mv      a0, s2
 	li      a7, 9					; print hours
 	ecall
