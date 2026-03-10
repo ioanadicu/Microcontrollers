@@ -12,12 +12,15 @@
 ;       Known bugs:
 ;       - Move decprint to user space libary call
 ;		- See if I can get rid of more ecalls
-;		- ecall max auto calculation
+;		- ecall max auto calculation				v
 ;		- Feedback from lab 3
 ;---------------------------------------------------------
 
-ORG		0x0000_0000
-J 		initialisation
+ORG				0x0000_0000
+J 				initialisation
+
+ecall_max		EQU 		(ecall_end - ecall_0) / 4
+
 INCLUDE DisplayOperations.s                 ; Library with Display Operations
 
 ;---------------------------------------------------------
@@ -175,7 +178,7 @@ ecall_11
 	sw		t0, 0x14[t1]
 	j 		ecall_exit
 
-ecall_max		EQU 	0x12
+ecall_end
 
 
 ecall_exit

@@ -11,11 +11,15 @@ KMD
 00000000:             ; ;       - uses DisplayOperations.s
 00000000:             ; ;
 00000000:             ; ;       Known bugs:
-00000000:             ; ;       - none
+00000000:             ; ;       - Move decprint to user space libary call
+00000000:             ; ;               - See if I can get rid of more ecalls
+00000000:             ; ;               - ecall max auto calculation
+00000000:             ; ;               - Feedback from lab 3
 00000000:             ; ;---------------------------------------------------------
 00000000:             ; 
-00000000:             ; ORG             0x0000_0000
-00000000: 1E80006F    ; J               initialisation
+00000000:             ; ORG                             0x0000_0000
+00000000: 1E80006F    ; J                               initialisation
+00000004:             ; ecall_max               EQU             (ecall_end - ecall_0) / 4
 00000004:             ; INCLUDE DisplayOperations.s                 ; Library with Display Operations
 00000004:             ; ;-----------------------------------------------------------------------------
 00000004:             ; ;       Display Operations Library
@@ -382,7 +386,7 @@ KMD
 000002B4: 0000006F    ; trap_handler_7          j       .               ; Store access fault
 000002B8:             ; 
 000002B8:             ; trap_handler_8                                  ; Environment call from U-mode
-000002B8: 01200293    ;         li              t0, ecall_max           ; Check argument is legitimate
+000002B8: 02C00293    ;         li              t0, ecall_max           ; Check argument is legitimate
 000002BC: 0658F463    ;         bgeu    a7, t0, ecall_range     ; Out of range default
 000002C0: 00000297    ;         la              t0, ecall_jump          ; Point at table
 000002C4: 01828293    ; 
@@ -486,7 +490,7 @@ KMD
 000003D0: 00532A23    ;         sw              t0, 0x14[t1]
 000003D4: 0040006F    ;         j               ecall_exit
 000003D8:             ; 
-000003D8:             ; ecall_max               EQU     0x12
+000003D8:             ; ecall_end
 000003D8:             ; 
 000003D8:             ; 
 000003D8:             ; ecall_exit
@@ -798,6 +802,7 @@ KMD
 000402E8:             ; 
 
 Symbol Table: Labels
+: ecall_max                         0000002C  Value
 : LCD_DATA                          00010100  Value
 : LCD_CONTROL                       00010101  Value
 : MASK7                             00000080  Value
@@ -852,7 +857,7 @@ Symbol Table: Labels
 : ecall_9                           000003A8  Label
 : ecall_10                          000003B0  Label
 : ecall_11                          000003C4  Label
-: ecall_max                         00000012  Value
+: ecall_end                         000003D8  Label
 : ecall_exit                        000003D8  Label
 : mstack                            000003FC  Label
 : mstack_base                       00000460  Label
