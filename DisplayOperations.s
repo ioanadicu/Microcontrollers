@@ -26,6 +26,10 @@ DELAY           EQU     0x000690            ; delay used in the counter
 WRITE_CTRL      EQU     0b1010              ; controls when we want to write a character to the display
 SHIFT_NEXT      EQU     0b1100_0000         ; DB7-DB0 data to move cursor to next line
 MASKPRINT       EQU     0b1111
+RW              EQU     0x1 
+RS              EQU     0x2 
+E               EQU     0x4 
+LIGHT           EQU     0x8
 AMIN            EQU     'A' - 0x10
                 align
 
@@ -115,16 +119,18 @@ waitLcdIdle
     sw      s4,  0[sp]
 
     li s0, LCD_DATA
-    li s1, 0b1101       ; control signals with E=1
-    li s2, 0b1001       ; control signals with E=0
+    ; li s1, LIGHT | E | RW   ; control signals with E=1
+    ; li s2, LIGHT | RW       ; control signals with E=0
     ;li s3, LCD_BUSY        ; bit 7 mask
 
     ; Set to read control with data bus direction as input
-    sb s2, 1[s0]
+    li t0, LIGHT | RW 
+    sb t0, 1[s0]
 
 STEP_2
     ; Enable signal 1
-    sb s1, 1[s0]
+    li t0, LIGHT | E | RW 
+    sb t0, 1[s0]
 
     ; Delay to stretch pulse
     call waiting_loop
@@ -133,7 +139,8 @@ STEP_2
     lw s4, [s0]
 
     ; Enable signal 0
-    sb s2, 1[s0]
+    li t0, LIGHT | RW 
+    sb t0, 1[s0]
 
     ; Delay to separate enable pulses
     call waiting_loop
