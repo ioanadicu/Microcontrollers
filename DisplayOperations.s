@@ -21,8 +21,7 @@
 
 ; Defining names to aid readability
 LCD_DATA        EQU     0x0001_0100         ; address where we write display data
-LCD_CONTROL     EQU     0x0001_0101         ; address where we write control signals for the display
-MASK7           EQU     0x80                ; mask used to find wether bit 7 set with an AND operaton
+LCD_BUSY        EQU     0x80                ; mask used to find wether bit 7 set with an AND operaton
 DELAY           EQU     0x000690            ; delay used in the counter
 WRITE_CTRL      EQU     0b1010              ; controls when we want to write a character to the display
 SHIFT_NEXT      EQU     0b1100_0000         ; DB7-DB0 data to move cursor to next line
@@ -34,7 +33,7 @@ AMIN            EQU     'A' - 0x10
 ; def moveCursor(): moves the cursor to the second line of the display
 moveCursor
     subi    sp, sp, 4
-    sw      ra,  0[sp]  ; caller saved - I save it here and use it at the end of the function 
+    sw      ra,  0[sp]  ; saving return address
 
     call waitLcdIdle
 
@@ -45,46 +44,43 @@ moveCursor
     lw      ra,  0[sp]
     addi    sp, sp, 4
 
-    jr ra
+    ret
 
 
 
 
 ; def printString(pointer): cycles through every character of a string until it 
 ;                   finds the null character and calls another function to print each
-; function arguments
+; function argument
 ; a0 = pointer to string
 
 ; local variables
 ; s0 = will hold the pointer because we plan on overwriting a0 for passing arguments to other functions
-; s1 = using it to load chat at address pointed
+; s1 = using it to load char at address pointed
 
 
 printString
     subi    sp, sp, 12
-    sw      ra,  8[sp]  ; caller saved - I save it here and use it at the end of the function 
+    sw      ra,  8[sp]  ; saving return address
     sw      s0,  4[sp]  ; calee saved - saving it before executing anything and restoring when done
     sw      s1,  0[sp]
 
     mv s0, a0
     lb s1, [s0]
 
-    ; printing first character
-    mv a0, s1
-    li a1, WRITE_CTRL   ; will be used as function argument in writeString
-    call lcdSendCommand
+whileChar
+    ; while (char != null)
+    beqz    s1, foundNull
 
-    ; printing the other characters until we reach the null character so we know our string ended
-notEnded
-    addi s0, s0, 1
-    lb s1, [s0]
-    beqz s1, foundNull
+    ; print character
+    mv      a0, s1
+    li      a1, WRITE_CTRL
+    call    lcdSendCommand
 
-    mv a0, s1
-    li a1, WRITE_CTRL   ; will be used as function argument in writeString
-    call lcdSendCommand
-
-    j notEnded
+    ; point to next character
+    addi    s0, s0, 1
+    lb      s1, [s0]
+    j       whileChar  
 
 foundNull
 
@@ -94,7 +90,7 @@ foundNull
     lw      ra,  8[sp]
     addi    sp, sp, 12
 
-    jr ra
+    ret
 
 
 
@@ -111,7 +107,7 @@ foundNull
 waitLcdIdle
     ; save ra and s registers
     subi    sp, sp, 24
-    sw      ra, 20[sp]  ; caller saved - I save it here and use it at the end of the function 
+    sw      ra, 20[sp]  ; saving return address
     sw      s0, 16[sp]  ; s registers calee saved - saving it before executing anything and restoring when done
     sw      s1, 12[sp]
     sw      s2,  8[sp]
@@ -121,7 +117,7 @@ waitLcdIdle
     li s0, LCD_DATA
     li s1, 0b1101       ; control signals with E=1
     li s2, 0b1001       ; control signals with E=0
-    li s3, MASK7        ; bit 7 mask
+    ;li s3, LCD_BUSY        ; bit 7 mask
 
     ; Set to read control with data bus direction as input
     sb s2, 1[s0]
@@ -143,8 +139,8 @@ STEP_2
     call waiting_loop
 
     ; If bit 7 high repeat from step 2
-    and s4, s4, s3
-    bnez s4, STEP_2
+    andi    s4, s4, LCD_BUSY
+    bnez    s4, STEP_2
 
     ; Getting ra back and the callee saved registers
     lw      s4,  0[sp]  
@@ -172,7 +168,7 @@ STEP_2
 lcdSendCommand
 
     subi    sp, sp, 8
-    sw      ra,  4[sp]  ; caller saved - I save it here and use it at the end of the function 
+    sw      ra,  4[sp]  ; saving return address
     sw      s0,  0[sp]  ; s register calee saved - saving it before executing anything and restoring when done
 
 
@@ -220,7 +216,7 @@ lcdSendCommand
     lw      ra,  4[sp]
     addi    sp, sp, 8
 
-    jr ra
+    ret
 
 
 
@@ -234,7 +230,7 @@ waiting_loop
     li t0, DELAY
 loop_point
     subi t0, t0, 0b1
-    bne t0, zero, loop_point
+    bnez t0, loop_point
     jr  ra
 
 

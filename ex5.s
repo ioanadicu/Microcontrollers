@@ -134,7 +134,7 @@ ecall_3
 	j 		ecall_exit
 
 ecall_4
-	li 	    t0, SECOND			; Setting the limit
+	li 	    t0, MODULUS				; Setting the limit
 	li 		t1, TIME_PERIPH
 	sw		t0, 0x4[t1]
 	
@@ -211,6 +211,7 @@ CLEAR_CTRL      EQU     0b1000              ; Controls when we want to clear the
 
 ;SECOND 			EQU 	0x98967F
 SECOND 			EQU 	0x18967F
+MODULUS			EQU 	999999
 TIME_PERIPH		EQU		0x0001_0200
 REGINIT			EQU		0b11
 BUTTONS			EQU		0x0001_0001
