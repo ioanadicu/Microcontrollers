@@ -15,7 +15,7 @@ KMD
 00000000:             ; ;---------------------------------------------------------
 00000000:             ; 
 00000000:             ; ORG             0x0000_0000
-00000000: 24C0006F    ; J               initialisation
+00000000: 1E80006F    ; J               initialisation
 00000004:             ; INCLUDE DisplayOperations.s                 ; Library with Display Operations
 00000004:             ; ;-----------------------------------------------------------------------------
 00000004:             ; ;       Display Operations Library
@@ -271,282 +271,240 @@ KMD
 00000170:             ; 
 00000170:             ; 
 00000170:             ; 
-00000170:             ; 
-00000170:             ; ; printing hex
-00000170:             ; ; a0 - number
-00000170:             ; 
-00000170:             ; PrintHex8
-00000170: FF810113    ;     subi    sp, sp, 8
-00000174: 00112223    ;     sw      ra,  4[sp]  ; caller saved - I save it here and use it at the end of the function 
-00000178: 00812023    ;     sw      s0,  0[sp]  ; s register calee saved - saving it before executing anything and rest
-                      ; oring when done
-0000017C:             ; 
-0000017C: 00050413    ;     mv      s0, a0              ; Make a copy of the input
-00000180: 00455513    ;     srli    a0, a0, 0x4         ; Shift right 4 places
-00000184: 01C000EF    ;     call    printHex4
-00000188: 00040513    ;     mv      a0, s0              ; Restore value from the copy
-0000018C: 014000EF    ;     call    printHex4
-00000190:             ; 
-00000190:             ;     ; Getting ra back and the callee saved registers
-00000190: 00012403    ;     lw      s0,  0[sp]
-00000194: 00412083    ;     lw      ra,  4[sp]
-00000198: 00810113    ;     addi    sp, sp, 8
+00000170:             ; ; def printdec
+00000170:             ; printDec
+00000170: FF410113    ;     subi    sp, sp, 12
+00000174: 00112423    ;     sw      ra,  8[sp]
+00000178: 00812223    ;     sw      s0,  4[sp]
+0000017C: 00912023    ;     sw      s1,  0[sp]
+00000180:             ; 
+00000180: 00050413    ;     mv      s0, a0          ; s0 = value
+00000184: 00000493    ;     li      s1, 0           ; s1 = digit count
+00000188:             ; 
+00000188:             ;     ; Special case: if value == 0, print '0' and return
+00000188: 00041A63    ;     bnez    s0, dec_loop
+0000018C: 03000513    ;     li      a0, '0'
+00000190: 00A00593    ;     li      a1, WRITE_CTRL
+00000194: F59FF0EF    ;     call    lcdSendCommand
+00000198: 03C0006F    ;     j       dec_done
 0000019C:             ; 
-0000019C: 00008067    ;     jr ra
-000001A0:             ; 
-000001A0:             ; printHex4
-000001A0: FFC10113    ;     subi    sp, sp, 4
-000001A4: 00112023    ;     sw      ra,  0[sp]  ; caller saved - I save it here and use it at the end of the function 
-000001A8:             ; 
-000001A8: 00F57513    ;     andi    a0, a0, MASKPRINT   ; Mask off everything except lower 4 bits
-000001AC: 00900293    ;     li      t0, 0x9      
-000001B0: 00A2C663    ;     bgt     a0, t0, addition    ; if a0 > 9
-000001B4: 03050513    ;     addi    a0, a0, '0'
-000001B8: 0080006F    ;     j       calling
-000001BC:             ; addition
-000001BC: 03150513    ;     addi    a0, a0, AMIN
-000001C0:             ; calling
-000001C0: 00A00593    ;     li      a1, WRITE_CTRL   ; will be used as function argument in writeString
-000001C4: F29FF0EF    ;     call    lcdSendCommand
-000001C8:             ; 
-000001C8: 00012083    ;     lw      ra,  0[sp]
-000001CC: 00410113    ;     addi    sp, sp, 4
-000001D0:             ; 
-000001D0: 00008067    ;     jr      ra
+0000019C:             ; dec_loop
+0000019C: 00A00313    ;     li      t1, 10
+000001A0: 026472B3    ;     remu    t0, s0, t1      ; t0 = s0 % 10
+000001A4: 02645433    ;     divu    s0, s0, t1      ; s0 = s0 / 10
+000001A8: 03028293    ;     addi    t0, t0, '0'     ; ASCII digit
+000001AC:             ; 
+000001AC: FFC10113    ;     subi    sp, sp, 4
+000001B0: 00512023    ;     sw      t0, 0[sp]       ; push ASCII digit as a word
+000001B4: 00148493    ;     addi    s1, s1, 1
+000001B8: FE0412E3    ;     bnez    s0, dec_loop
+000001BC:             ; 
+000001BC:             ; print_loop
+000001BC:             ;     ; pop and print digits
+000001BC: 00012503    ;     lw      a0, 0[sp]
+000001C0: 00410113    ;     addi    sp, sp, 4
+000001C4: 00A00593    ;     li      a1, WRITE_CTRL
+000001C8: F25FF0EF    ;     call    lcdSendCommand
+000001CC:             ; 
+000001CC: FFF48493    ;     addi    s1, s1, -1
+000001D0: FE0496E3    ;     bnez    s1, print_loop
 000001D4:             ; 
-000001D4:             ; 
-000001D4:             ; 
-000001D4:             ; PrintDecU32
-000001D4: FF410113    ;     subi    sp, sp, 12
-000001D8: 00112423    ;     sw      ra,  8[sp]
-000001DC: 00812223    ;     sw      s0,  4[sp]
-000001E0: 00912023    ;     sw      s1,  0[sp]
-000001E4:             ; 
-000001E4: 00050413    ;     mv      s0, a0          ; s0 = value
-000001E8: 00000493    ;     li      s1, 0           ; s1 = digit count
-000001EC:             ; 
-000001EC:             ;     ; Special case: if value == 0, print '0' and return
-000001EC: 00041A63    ;     bnez    s0, dec_loop
-000001F0: 03000513    ;     li      a0, '0'
-000001F4: 00A00593    ;     li      a1, WRITE_CTRL
-000001F8: EF5FF0EF    ;     call    lcdSendCommand
-000001FC: 03C0006F    ;     j       dec_done
-00000200:             ; 
-00000200:             ; dec_loop
-00000200: 00A00313    ;     li      t1, 10
-00000204: 026472B3    ;     remu    t0, s0, t1      ; t0 = s0 % 10
-00000208: 02645433    ;     divu    s0, s0, t1      ; s0 = s0 / 10
-0000020C: 03028293    ;     addi    t0, t0, '0'     ; ASCII digit
-00000210:             ; 
-00000210: FFC10113    ;     subi    sp, sp, 4
-00000214: 00512023    ;     sw      t0, 0[sp]       ; push ASCII digit as a word
-00000218: 00148493    ;     addi    s1, s1, 1
-0000021C: FE0412E3    ;     bnez    s0, dec_loop
-00000220:             ; 
-00000220:             ; print_loop
-00000220:             ;     ; pop and print digits
-00000220: 00012503    ;     lw      a0, 0[sp]
-00000224: 00410113    ;     addi    sp, sp, 4
-00000228: 00A00593    ;     li      a1, WRITE_CTRL
-0000022C: EC1FF0EF    ;     call    lcdSendCommand
-00000230:             ; 
-00000230: FFF48493    ;     addi    s1, s1, -1
-00000234: FE0496E3    ;     bnez    s1, print_loop
+000001D4:             ; dec_done
+000001D4: 00012483    ;     lw      s1,  0[sp]
+000001D8: 00412403    ;     lw      s0,  4[sp]
+000001DC: 00812083    ;     lw      ra,  8[sp]
+000001E0: 00C10113    ;     addi    sp, sp, 12
+000001E4: 00008067    ;     ret
+000001E8:             ; 
+000001E8:             ; ;---------------------------------------------------------
+000001E8:             ; ; OS SECTION - Machine mode
+000001E8:             ; ;---------------------------------------------------------
+000001E8:             ; 
+000001E8:             ; initialisation
+000001E8: 000022B7    ;         li              t0, 0x0000_1800         ; Load MPP mask - bits 12 & 11
+000001EC: 80028293    ; 
+000001F0: 3002B073    ;         csrc    MSTATUS, t0                     ; Clear MPP bits in status
+000001F4: 00000297    ;         la              t0, mhandler            ; Point at trap handler code start
+000001F8: 03028293    ; 
+000001FC: 30529073    ;         csrw    MTVEC, t0                       ; Save address in system CSR
+00000200: 00000297    ;         la              t0, mstack_base         ; Point at machine stack
+00000204: 26028293    ; 
+00000208: 34029073    ;         csrw    MSCRATCH, t0            ; Copy 'machine' SP for use in handler
+0000020C: 00040117    ;         la              sp, user_stack_base     ; change SP to user space
+00000210: EE410113    ; 
+00000214: 00040097    ;         la              ra, user_code           ; Point at user code start
+00000218: DEC08093    ; 
+0000021C: 34109073    ;         csrw    MEPC, ra                        ; Save as 'return address'
+00000220: 30200073    ;         mret                                            ; 'Return' to programme start
+00000224:             ; 
+00000224:             ; mhandler
+00000224: 34011173    ;         csrrw   sp, MSCRATCH, sp        ; Save user SP, get machine SP
+00000228: FF410113    ;         subi    sp, sp, 12                      ; Push working registers
+0000022C: 00912423    ;         sw              s1, 8[sp]
+00000230: 00812223    ;         sw              s0, 4[sp]
+00000234: 00112023    ;         sw              ra, 0[sp]
 00000238:             ; 
-00000238:             ; dec_done
-00000238: 00012483    ;     lw      s1,  0[sp]
-0000023C: 00412403    ;     lw      s0,  4[sp]
-00000240: 00812083    ;     lw      ra,  8[sp]
-00000244: 00C10113    ;     addi    sp, sp, 12
-00000248: 00008067    ;     ret
-0000024C:             ; 
-0000024C:             ; ;---------------------------------------------------------
-0000024C:             ; ; OS SECTION - Machine mode
-0000024C:             ; ;---------------------------------------------------------
-0000024C:             ; 
-0000024C:             ; initialisation
-0000024C: 000022B7    ;         li              t0, 0x0000_1800         ; Load MPP mask - bits 12 & 11
-00000250: 80028293    ; 
-00000254: 3002B073    ;         csrc    MSTATUS, t0                     ; Clear MPP bits in status
-00000258: 00000297    ;         la              t0, mhandler            ; Point at trap handler code start
-0000025C: 03028293    ; 
-00000260: 30529073    ;         csrw    MTVEC, t0                       ; Save address in system CSR
-00000264: 00000297    ;         la              t0, mstack_base         ; Point at machine stack
-00000268: 25C28293    ; 
-0000026C: 34029073    ;         csrw    MSCRATCH, t0            ; Copy 'machine' SP for use in handler
-00000270: 00040117    ;         la              sp, user_stack_base     ; change SP to user space
-00000274: E8010113    ; 
-00000278: 00040097    ;         la              ra, user_code           ; Point at user code start
-0000027C: D8808093    ; 
-00000280: 34109073    ;         csrw    MEPC, ra                        ; Save as 'return address'
-00000284: 30200073    ;         mret                                            ; 'Return' to programme start
-00000288:             ; 
-00000288:             ; mhandler
-00000288: 34011173    ;         csrrw   sp, MSCRATCH, sp        ; Save user SP, get machine SP
-0000028C: FF410113    ;         subi    sp, sp, 12                      ; Push working registers
-00000290: 00912423    ;         sw              s1, 8[sp]
-00000294: 00812223    ;         sw              s0, 4[sp]
-00000298: 00112023    ;         sw              ra, 0[sp]
-0000029C:             ; 
-0000029C: 342022F3    ;         csrr    t0, MCAUSE                      ; Read why we came here
-000002A0: 00F2F293    ;         andi    t0, t0, 0xF                     ; Cautious - guarantees in range
-000002A4: 00000317    ;         la              t1, trap_table          ; Pointer to table
-000002A8: 01830313    ; 
-000002AC: 00229293    ;         slli    t0, t0, 2                       ; Multiply cause to word offset
-000002B0: 00628333    ;         add     t1, t0, t1                      ; Index into table
-000002B4: 00032303    ;         lw              t1, [t1]                        ; Get handler address
-000002B8: 00030067    ;         jr              t1                                      ; Call specific handler (RA is 
+00000238: 342022F3    ;         csrr    t0, MCAUSE                      ; Read why we came here
+0000023C: 00F2F293    ;         andi    t0, t0, 0xF                     ; Cautious - guarantees in range
+00000240: 00000317    ;         la              t1, trap_table          ; Pointer to table
+00000244: 01830313    ; 
+00000248: 00229293    ;         slli    t0, t0, 2                       ; Multiply cause to word offset
+0000024C: 00628333    ;         add     t1, t0, t1                      ; Index into table
+00000250: 00032303    ;         lw              t1, [t1]                        ; Get handler address
+00000254: 00030067    ;         jr              t1                                      ; Call specific handler (RA is 
                       ; implicit)
-000002BC:             ; 
-000002BC:             ; trap_table
-000002BC: 000002FC    ;         defw    trap_handler_0          ; Instruction address misaligned
-000002C0: 00000300    ;         defw    trap_handler_1          ; Instruction access fault
-000002C4: 00000304    ;         defw    trap_handler_2          ; Illegal instruction
-000002C8: 00000308    ;         defw    trap_handler_3          ; Breakpoint
-000002CC: 0000030C    ;         defw    trap_handler_4          ; Load address misaligned
-000002D0: 00000310    ;         defw    trap_handler_5          ; Load access fault
-000002D4: 00000314    ;         defw    trap_handler_6          ; Store address misaligned
-000002D8: 00000318    ;         defw    trap_handler_7          ; Store access fault
-000002DC: 0000031C    ;         defw    trap_handler_8          ; Environment call from U-mode
-000002E0: 0000036C    ;         defw    trap_handler_9          ; Environment call from S-mode
-000002E4: 00000370    ;         defw    trap_handler_10         ; Reserved
-000002E8: 00000374    ;         defw    trap_handler_11         ; Environment call from M-mode
-000002EC: 00000378    ;         defw    trap_handler_12         ; Instruction page fault
-000002F0: 0000037C    ;         defw    trap_handler_13         ; Load page fault
-000002F4: 00000380    ;         defw    trap_handler_14         ; Reserved for future standard use
-000002F8: 00000384    ;         defw    trap_handler_15         ; Store page fault
-000002FC:             ; 
-000002FC: 0000006F    ; trap_handler_0          j       .               ; Instruction address misaligned
-00000300: 0000006F    ; trap_handler_1          j       .               ; Instruction access fault
-00000304: 0000006F    ; trap_handler_2          j       .               ; Illegal instruction
-00000308: 0000006F    ; trap_handler_3          j       .               ; Breakpoint
-0000030C: 0000006F    ; trap_handler_4          j       .               ; Load address misaligned
-00000310: 0000006F    ; trap_handler_5          j       .               ; Load access fault
-00000314: 0000006F    ; trap_handler_6          j       .               ; Store address misaligned
-00000318: 0000006F    ; trap_handler_7          j       .               ; Store access fault
-0000031C:             ; 
-0000031C:             ; trap_handler_8                                  ; Environment call from U-mode
-0000031C: 01200293    ;         li              t0, ecall_max           ; Check argument is legitimate
-00000320: 0658F463    ;         bgeu    a7, t0, ecall_range     ; Out of range default
-00000324: 00000297    ;         la              t0, ecall_jump          ; Point at table
-00000328: 01828293    ; 
-0000032C: 00289313    ;         slli    t1, a7, 2                       ; Calculate index (in words)
-00000330: 006282B3    ;         add     t0, t0, t1                      ;
-00000334: 0002A283    ;         lw              t0, [t0]                        ; Load address of service routine
-00000338: 00028067    ;         jr              t0                                      ;  and jump to it
-0000033C:             ; 
-0000033C:             ; ecall_jump
-0000033C: 0000038C    ;         defw    ecall_0                         ; Ecall for cleaning screen
-00000340: 0000039C    ;         defw    ecall_1                         ; Ecall for displaying a character
-00000344: 000003A4    ;         defw    ecall_2                         ; Ecall for displaying a string
-00000348: 000003AC    ;         defw    ecall_3                         ; Ecall for going to next line on display
-0000034C: 000003B4    ;         defw    ecall_4                         ; Initialising counter
-00000350: 000003D4    ;         defw    ecall_5                         ; Getting buttons
-00000354: 000003E4    ;         defw    ecall_6                         ; Getting Status register bits
-00000358: 000003F4    ;         defw    ecall_7                         ; Print Hex
-0000035C: 000003FC    ;         defw    ecall_8                         ; bit 31 reset
-00000360: 00000410    ;         defw    ecall_9                         ; Print decimal
-00000364: 00000418    ;         defw    ecall_10                        ; Pause timer
-00000368: 00000428    ;         defw    ecall_11                        ; Resume timer
-0000036C:             ; 
-0000036C: 0000006F    ; trap_handler_9          j       .               ; Environment call from S-mode
-00000370: 0000006F    ; trap_handler_10         j       .               ; Reserved
-00000374: 0000006F    ; trap_handler_11         j       .               ; Environment call from M-mode
-00000378: 0000006F    ; trap_handler_12         j       .               ; Instruction page fault
-0000037C: 0000006F    ; trap_handler_13         j       .               ; Load page fault
-00000380: 0000006F    ; trap_handler_14         j       .               ; Reserved for future standard use
-00000384: 0000006F    ; trap_handler_15         j       .               ; Store page fault
-00000388:             ; 
-00000388:             ; 
-00000388: 0000006F    ; ecall_range                     j       .               ; It jumps here if out of range
-0000038C:             ; 
-0000038C:             ; ecall_0
-0000038C: 00100513    ;         li              a0, CLEAR_DIS
-00000390: 00800593    ;         li              a1, CLEAR_CTRL
-00000394: D59FF0EF    ;         call    lcdSendCommand
-00000398: 0A00006F    ;         j               ecall_exit
-0000039C:             ; 
-0000039C:             ; ecall_1 
-0000039C: D51FF0EF    ;         call    lcdSendCommand
-000003A0: 0980006F    ;         j               ecall_exit
-000003A4:             ; 
-000003A4:             ; ecall_2
-000003A4: C85FF0EF    ;         call    printString
-000003A8: 0900006F    ;         j               ecall_exit
-000003AC:             ; 
-000003AC:             ; ecall_3
-000003AC: C59FF0EF    ;         call    moveCursor
-000003B0: 0880006F    ;         j               ecall_exit
-000003B4:             ; 
-000003B4:             ; ecall_4
-000003B4: 001892B7    ;         li          t0, SECOND                  ; Setting the limit
-000003B8: 67F28293    ; 
-000003BC: 00010337    ;         li              t1, TIME_PERIPH
-000003C0: 20030313    ; 
-000003C4: 00532223    ;         sw              t0, 0x4[t1]
-000003C8:             ;         
-000003C8: 00300293    ;         li              t0, REGINIT
-000003CC: 00532A23    ;         sw              t0, 0x14[t1]    
-000003D0: 0680006F    ;         j               ecall_exit
-000003D4:             ; 
-000003D4:             ; ecall_5
-000003D4: 000102B7    ;         li              t0, BUTTONS
-000003D8: 00128293    ; 
-000003DC: 00028503    ;         lb              a0, [t0]
-000003E0: 0580006F    ;         j               ecall_exit
+00000258:             ; 
+00000258:             ; trap_table
+00000258: 00000298    ;         defw    trap_handler_0          ; Instruction address misaligned
+0000025C: 0000029C    ;         defw    trap_handler_1          ; Instruction access fault
+00000260: 000002A0    ;         defw    trap_handler_2          ; Illegal instruction
+00000264: 000002A4    ;         defw    trap_handler_3          ; Breakpoint
+00000268: 000002A8    ;         defw    trap_handler_4          ; Load address misaligned
+0000026C: 000002AC    ;         defw    trap_handler_5          ; Load access fault
+00000270: 000002B0    ;         defw    trap_handler_6          ; Store address misaligned
+00000274: 000002B4    ;         defw    trap_handler_7          ; Store access fault
+00000278: 000002B8    ;         defw    trap_handler_8          ; Environment call from U-mode
+0000027C: 00000308    ;         defw    trap_handler_9          ; Environment call from S-mode
+00000280: 0000030C    ;         defw    trap_handler_10         ; Reserved
+00000284: 00000310    ;         defw    trap_handler_11         ; Environment call from M-mode
+00000288: 00000314    ;         defw    trap_handler_12         ; Instruction page fault
+0000028C: 00000318    ;         defw    trap_handler_13         ; Load page fault
+00000290: 0000031C    ;         defw    trap_handler_14         ; Reserved for future standard use
+00000294: 00000320    ;         defw    trap_handler_15         ; Store page fault
+00000298:             ; 
+00000298: 0000006F    ; trap_handler_0          j       .               ; Instruction address misaligned
+0000029C: 0000006F    ; trap_handler_1          j       .               ; Instruction access fault
+000002A0: 0000006F    ; trap_handler_2          j       .               ; Illegal instruction
+000002A4: 0000006F    ; trap_handler_3          j       .               ; Breakpoint
+000002A8: 0000006F    ; trap_handler_4          j       .               ; Load address misaligned
+000002AC: 0000006F    ; trap_handler_5          j       .               ; Load access fault
+000002B0: 0000006F    ; trap_handler_6          j       .               ; Store address misaligned
+000002B4: 0000006F    ; trap_handler_7          j       .               ; Store access fault
+000002B8:             ; 
+000002B8:             ; trap_handler_8                                  ; Environment call from U-mode
+000002B8: 01200293    ;         li              t0, ecall_max           ; Check argument is legitimate
+000002BC: 0658F463    ;         bgeu    a7, t0, ecall_range     ; Out of range default
+000002C0: 00000297    ;         la              t0, ecall_jump          ; Point at table
+000002C4: 01828293    ; 
+000002C8: 00289313    ;         slli    t1, a7, 2                       ; Calculate index (in words)
+000002CC: 006282B3    ;         add     t0, t0, t1                      ;
+000002D0: 0002A283    ;         lw              t0, [t0]                        ; Load address of service routine
+000002D4: 00028067    ;         jr              t0                                      ;  and jump to it
+000002D8:             ; 
+000002D8:             ; ecall_jump
+000002D8: 00000328    ;         defw    ecall_0                         ; Ecall for cleaning screen
+000002DC: 00000338    ;         defw    ecall_1                         ; Ecall for displaying a character
+000002E0: 00000340    ;         defw    ecall_2                         ; Ecall for displaying a string
+000002E4: 00000348    ;         defw    ecall_3                         ; Ecall for going to next line on display
+000002E8: 00000350    ;         defw    ecall_4                         ; Initialising counter
+000002EC: 00000370    ;         defw    ecall_5                         ; Getting buttons
+000002F0: 00000380    ;         defw    ecall_6                         ; Getting Status register bits
+000002F4: 00000390    ;         defw    ecall_7                         ; Print Hex
+000002F8: 00000394    ;         defw    ecall_8                         ; bit 31 reset
+000002FC: 000003A8    ;         defw    ecall_9                         ; Print decimal
+00000300: 000003B0    ;         defw    ecall_10                        ; Pause timer
+00000304: 000003C4    ;         defw    ecall_11                        ; Resume timer
+00000308:             ; 
+00000308: 0000006F    ; trap_handler_9          j       .               ; Environment call from S-mode
+0000030C: 0000006F    ; trap_handler_10         j       .               ; Reserved
+00000310: 0000006F    ; trap_handler_11         j       .               ; Environment call from M-mode
+00000314: 0000006F    ; trap_handler_12         j       .               ; Instruction page fault
+00000318: 0000006F    ; trap_handler_13         j       .               ; Load page fault
+0000031C: 0000006F    ; trap_handler_14         j       .               ; Reserved for future standard use
+00000320: 0000006F    ; trap_handler_15         j       .               ; Store page fault
+00000324:             ; 
+00000324:             ; 
+00000324: 0000006F    ; ecall_range                     j       .               ; It jumps here if out of range
+00000328:             ; 
+00000328:             ; ecall_0
+00000328: 00100513    ;         li              a0, CLEAR_DIS
+0000032C: 00800593    ;         li              a1, CLEAR_CTRL
+00000330: DBDFF0EF    ;         call    lcdSendCommand
+00000334: 0A40006F    ;         j               ecall_exit
+00000338:             ; 
+00000338:             ; ecall_1 
+00000338: DB5FF0EF    ;         call    lcdSendCommand
+0000033C: 09C0006F    ;         j               ecall_exit
+00000340:             ; 
+00000340:             ; ecall_2
+00000340: CE9FF0EF    ;         call    printString
+00000344: 0940006F    ;         j               ecall_exit
+00000348:             ; 
+00000348:             ; ecall_3
+00000348: CBDFF0EF    ;         call    moveCursor
+0000034C: 08C0006F    ;         j               ecall_exit
+00000350:             ; 
+00000350:             ; ecall_4
+00000350: 001892B7    ;         li          t0, SECOND                  ; Setting the limit
+00000354: 67F28293    ; 
+00000358: 00010337    ;         li              t1, TIME_PERIPH
+0000035C: 20030313    ; 
+00000360: 00532223    ;         sw              t0, 0x4[t1]
+00000364:             ;         
+00000364: 00300293    ;         li              t0, REGINIT
+00000368: 00532A23    ;         sw              t0, 0x14[t1]    
+0000036C: 06C0006F    ;         j               ecall_exit
+00000370:             ; 
+00000370:             ; ecall_5
+00000370: 000102B7    ;         li              t0, BUTTONS
+00000374: 00128293    ; 
+00000378: 00028503    ;         lb              a0, [t0]
+0000037C: 05C0006F    ;         j               ecall_exit
+00000380:             ; 
+00000380:             ; ecall_6
+00000380: 000102B7    ;         li              t0, TIME_PERIPH
+00000384: 20028293    ; 
+00000388: 00C2A503    ;         lw              a0, OFFSETSTAT[t0]
+0000038C: 04C0006F    ;         j               ecall_exit
+00000390:             ; 
+00000390:             ; ecall_7
+00000390:             ;         ; call  PrintHex8
+00000390: 0480006F    ;         j               ecall_exit
+00000394:             ; 
+00000394:             ; ecall_8
+00000394: 800002B7    ;         li              t0, 0x8000_0000
+00000398: 00010337    ;         li              t1, TIME_PERIPH
+0000039C: 20030313    ; 
+000003A0: 00532823    ;         sw              t0, 0x10[t1]
+000003A4: 0340006F    ;         j               ecall_exit
+000003A8:             ; 
+000003A8:             ; ecall_9
+000003A8: DC9FF0EF    ;         call    printDec
+000003AC: 02C0006F    ;         j               ecall_exit
+000003B0:             ; 
+000003B0:             ; ecall_10
+000003B0: 00100293    ;         li              t0, 0b1
+000003B4: 00010337    ;         li              t1, TIME_PERIPH
+000003B8: 20030313    ; 
+000003BC: 00532823    ;         sw              t0, 0x10[t1]
+000003C0: 0180006F    ;         j               ecall_exit
+000003C4:             ; 
+000003C4:             ; ecall_11
+000003C4: 00100293    ;         li              t0, 0b1
+000003C8: 00010337    ;         li              t1, TIME_PERIPH
+000003CC: 20030313    ; 
+000003D0: 00532A23    ;         sw              t0, 0x14[t1]
+000003D4: 0040006F    ;         j               ecall_exit
+000003D8:             ; 
+000003D8:             ; ecall_max               EQU     0x12
+000003D8:             ; 
+000003D8:             ; 
+000003D8:             ; ecall_exit
+000003D8: 341292F3    ;         csrrw   t0, MEPC, t0    ; Find the trapping instruction PC
+000003DC: 00428293    ;         addi    t0, t0, 4               ; Correct to a return address
+000003E0: 341292F3    ;         csrrw   t0, MEPC, t0    ; Swap back in
 000003E4:             ; 
-000003E4:             ; ecall_6
-000003E4: 000102B7    ;         li              t0, TIME_PERIPH
-000003E8: 20028293    ; 
-000003EC: 00C2A503    ;         lw              a0, OFFSETSTAT[t0]
-000003F0: 0480006F    ;         j               ecall_exit
-000003F4:             ; 
-000003F4:             ; ecall_7
-000003F4: D7DFF0EF    ;         call    PrintHex8
-000003F8: 0400006F    ;         j               ecall_exit
+000003E4: 00012083    ;         lw              ra, [sp]                ; Pop working registers
+000003E8: 00412403    ;         lw              s0, 4[sp]
+000003EC: 00812483    ;         lw              s1, 8[sp]
+000003F0: 00C10113    ;         addi    sp, sp, 12
+000003F4: 34011173    ;         csrrw   sp, MSCRATCH, sp; Save Machine SP, get User SP
+000003F8: 30200073    ;         mret                                    ; Return
 000003FC:             ; 
-000003FC:             ; ecall_8
-000003FC: 800002B7    ;         li              t0, 0x8000_0000
-00000400: 00010337    ;         li              t1, TIME_PERIPH
-00000404: 20030313    ; 
-00000408: 00532823    ;         sw              t0, 0x10[t1]
-0000040C: 02C0006F    ;         j               ecall_exit
-00000410:             ; 
-00000410:             ; ecall_9
-00000410: DC5FF0EF    ;         call    PrintDecU32
-00000414: 0240006F    ;         j               ecall_exit
-00000418:             ; 
-00000418:             ; ecall_10
-00000418: 00100293    ;         li              t0, 0b1
-0000041C: 00010337    ;         li              t1, TIME_PERIPH
-00000420: 20030313    ; 
-00000424: 00532823    ;         sw              t0, 0x10[t1]
-00000428:             ; 
-00000428:             ; ecall_11
-00000428: 00100293    ;         li              t0, 0b1
-0000042C: 00010337    ;         li              t1, TIME_PERIPH
-00000430: 20030313    ; 
-00000434: 00532A23    ;         sw              t0, 0x14[t1]
-00000438:             ; 
-00000438:             ; ecall_max               EQU     0x12
-00000438:             ; 
-00000438:             ; 
-00000438:             ; ecall_exit
-00000438: 341292F3    ;         csrrw   t0, MEPC, t0    ; Find the trapping instruction PC
-0000043C: 00428293    ;         addi    t0, t0, 4               ; Correct to a return address
-00000440: 341292F3    ;         csrrw   t0, MEPC, t0    ; Swap back in
-00000444:             ; 
-00000444: 00012083    ;         lw              ra, [sp]                ; Pop working registers
-00000448: 00412403    ;         lw              s0, 4[sp]
-0000044C: 00812483    ;         lw              s1, 8[sp]
-00000450: 00C10113    ;         addi    sp, sp, 12
-00000454: 34011173    ;         csrrw   sp, MSCRATCH, sp; Save Machine SP, get User SP
-00000458: 30200073    ;         mret                                    ; Return
-0000045C:             ; 
-0000045C:             ; mstack                  defs    100
-000004C0:             ; mstack_base             align
-000004C0:             ; 
-000004C0:             ; 
+000003FC:             ; mstack                  defs    100
+00000460:             ; mstack_base             align
+00000460:             ; 
+00000460:             ; 
 00040000:             ; ORG             0x0004_0000
 00040000:             ; ;---------------------------------------------------------
 00040000:             ; ; USER SECTION
@@ -673,6 +631,8 @@ KMD
 0004013C: 00400893    ;         li              a7, 4
 00040140: 00000073    ;         ecall
 00040144:             ; 
+00040144:             ; printTimer
+00040144:             ; 
 00040144: 00000893    ;         li              a7, 0
 00040148: 00000073    ;         ecall                                                   ;clear sc
 0004014C:             ; 
@@ -683,7 +643,7 @@ KMD
 0004015C:             ; 
 0004015C: 00300893    ;         li              a7, 3                                   ; next line
 00040160: 00000073    ;         ecall
-00040164:             ;         
+00040164:             ; 
 00040164: 00090513    ;         mv      a0, s2
 00040168: 00900893    ;         li      a7, 9                                   ; print hours
 0004016C: 00000073    ;         ecall
@@ -817,7 +777,7 @@ KMD
 000402BC: 00B00893    ;         li              a7, 11
 000402C0: 00000073    ;         ecall
 000402C4:             ; 
-000402C4: EF5FF06F    ;         j waitUntilReached
+000402C4: E81FF06F    ;         j printTimer
 000402C8:             ; 
 000402C8:             ; chkrst
 000402C8:             ;         ; check if pause button SW3 is pressed
@@ -855,51 +815,47 @@ Symbol Table: Labels
 : lcdSendCommand                    000000EC  Label
 : waiting_loop                      00000160  Label
 : loop_point                        00000164  Label
-: PrintHex8                         00000170  Label
-: printHex4                         000001A0  Label
-: addition                          000001BC  Label
-: calling                           000001C0  Label
-: PrintDecU32                       000001D4  Label
-: dec_loop                          00000200  Label
-: print_loop                        00000220  Label
-: dec_done                          00000238  Label
-: initialisation                    0000024C  Label
-: mhandler                          00000288  Label
-: trap_table                        000002BC  Label
-: trap_handler_0                    000002FC  Label
-: trap_handler_1                    00000300  Label
-: trap_handler_2                    00000304  Label
-: trap_handler_3                    00000308  Label
-: trap_handler_4                    0000030C  Label
-: trap_handler_5                    00000310  Label
-: trap_handler_6                    00000314  Label
-: trap_handler_7                    00000318  Label
-: trap_handler_8                    0000031C  Label
-: ecall_jump                        0000033C  Label
-: trap_handler_9                    0000036C  Label
-: trap_handler_10                   00000370  Label
-: trap_handler_11                   00000374  Label
-: trap_handler_12                   00000378  Label
-: trap_handler_13                   0000037C  Label
-: trap_handler_14                   00000380  Label
-: trap_handler_15                   00000384  Label
-: ecall_range                       00000388  Label
-: ecall_0                           0000038C  Label
-: ecall_1                           0000039C  Label
-: ecall_2                           000003A4  Label
-: ecall_3                           000003AC  Label
-: ecall_4                           000003B4  Label
-: ecall_5                           000003D4  Label
-: ecall_6                           000003E4  Label
-: ecall_7                           000003F4  Label
-: ecall_8                           000003FC  Label
-: ecall_9                           00000410  Label
-: ecall_10                          00000418  Label
-: ecall_11                          00000428  Label
+: printDec                          00000170  Label
+: dec_loop                          0000019C  Label
+: print_loop                        000001BC  Label
+: dec_done                          000001D4  Label
+: initialisation                    000001E8  Label
+: mhandler                          00000224  Label
+: trap_table                        00000258  Label
+: trap_handler_0                    00000298  Label
+: trap_handler_1                    0000029C  Label
+: trap_handler_2                    000002A0  Label
+: trap_handler_3                    000002A4  Label
+: trap_handler_4                    000002A8  Label
+: trap_handler_5                    000002AC  Label
+: trap_handler_6                    000002B0  Label
+: trap_handler_7                    000002B4  Label
+: trap_handler_8                    000002B8  Label
+: ecall_jump                        000002D8  Label
+: trap_handler_9                    00000308  Label
+: trap_handler_10                   0000030C  Label
+: trap_handler_11                   00000310  Label
+: trap_handler_12                   00000314  Label
+: trap_handler_13                   00000318  Label
+: trap_handler_14                   0000031C  Label
+: trap_handler_15                   00000320  Label
+: ecall_range                       00000324  Label
+: ecall_0                           00000328  Label
+: ecall_1                           00000338  Label
+: ecall_2                           00000340  Label
+: ecall_3                           00000348  Label
+: ecall_4                           00000350  Label
+: ecall_5                           00000370  Label
+: ecall_6                           00000380  Label
+: ecall_7                           00000390  Label
+: ecall_8                           00000394  Label
+: ecall_9                           000003A8  Label
+: ecall_10                          000003B0  Label
+: ecall_11                          000003C4  Label
 : ecall_max                         00000012  Value
-: ecall_exit                        00000438  Label
-: mstack                            0000045C  Label
-: mstack_base                       000004C0  Label
+: ecall_exit                        000003D8  Label
+: mstack                            000003FC  Label
+: mstack_base                       00000460  Label
 : user_code                         00040000  Label
 : CLEAR_DIS                         00000001  Value
 : CLEAR_CTRL                        00000008  Value
@@ -926,6 +882,7 @@ Symbol Table: Labels
 : START                             000400F0  Label
 : waitUntilBttn                     00040120  Label
 : resetCounter                      00040130  Label
+: printTimer                        00040144  Label
 : waitUntilReached                  000401B8  Label
 : checkPause                        000401B8  Label
 : nomod                             000401FC  Label

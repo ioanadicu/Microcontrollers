@@ -164,7 +164,7 @@ user_code
 CLEAR_DIS       EQU     0b0000_0001         ; DB7-DB0 data to clear the display
 CLEAR_CTRL      EQU     0b1000              ; Controls when we want to clear the display
 
-SECOND 			EQU 	0x98967F
+SECOND 			EQU 	999999
 TIME_PERIPH		EQU		0x0001_0200
 REGINIT			EQU		0b11
 BUTTONS			EQU		0x0001_0001

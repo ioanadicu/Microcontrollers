@@ -10,7 +10,10 @@
 ;       - uses DisplayOperations.s
 ;
 ;       Known bugs:
-;       - none
+;       - Move decprint to user space libary call
+;		- See if I can get rid of more ecalls
+;		- ecall max auto calculation
+;		- Feedback from lab 3
 ;---------------------------------------------------------
 
 ORG		0x0000_0000
@@ -147,7 +150,7 @@ ecall_6
 	j 		ecall_exit
 
 ecall_7
-	call 	PrintHex8
+	; call 	PrintHex8
 	j 		ecall_exit
 
 ecall_8
@@ -164,11 +167,13 @@ ecall_10
 	li 		t0, 0b1
 	li		t1, TIME_PERIPH
 	sw		t0, 0x10[t1]
+	j 		ecall_exit
 
 ecall_11
 	li 		t0, 0b1
 	li		t1, TIME_PERIPH
 	sw		t0, 0x14[t1]
+	j 		ecall_exit
 
 ecall_max		EQU 	0x12
 
@@ -285,6 +290,8 @@ resetCounter
 	
 	li		a7, 4
 	ecall
+
+printTimer
 
 	li 		a7, 0
 	ecall							;clear sc
@@ -420,7 +427,7 @@ next_state
 	li 		a7, 11
 	ecall
 
-	j waitUntilReached
+	j printTimer
 
 chkrst
 	; check if pause button SW3 is pressed
