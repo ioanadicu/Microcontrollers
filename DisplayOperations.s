@@ -7,7 +7,6 @@
 ;       - moveCursor(): moves the cursor to the second line of the display
 ;       - printString(pointer): cycles through every character of a string until it 
 ;                   finds the null character and calls another function to print each
-;       - waitLcdIdle(): a function that waits and checks for the LCD to be idle
 ;       - lcdSendCommand(): prints a character to the display or clears the display or
 ;                   moves cursor based on signals
 ;       - waitingLoop(): a waiting loop to stretch pulse width/ separate enable pulses
@@ -24,32 +23,17 @@
 LCD_DATA        EQU     0x0001_0100         ; address where we write display data
 LCD_BUSY        EQU     0x80                ; mask used to find wether bit 7 set with an AND operaton
 DELAY           EQU     0x000690            ; delay used in the counter
-WRITE_CTRL      EQU     0b1010              ; controls when we want to write a character to the display
 SHIFT_NEXT      EQU     0b1100_0000         ; DB7-DB0 data to move cursor to next line
-MASKPRINT       EQU     0b1111
+
+LCD_REG_DATA    EQU     0x0     ; data register / status register
+LCD_REG_CTRL    EQU     0x1     ; control register
+
 RW              EQU     0x1 
 RS              EQU     0x2 
 E               EQU     0x4 
 LIGHT           EQU     0x8
 AMIN            EQU     'A' - 0x10
                 align
-
-
-; def moveCursor(): moves the cursor to the second line of the display
-moveCursor
-    subi    sp, sp, 4
-    sw      ra,  0[sp]  ; saving return address
-
-    call waitLcdIdle
-
-    li a0, SHIFT_NEXT
-    li a1, CLEAR_CTRL                       ; using same controls as the ones when clearing the display
-    call lcdSendCommand                     ; calling lcdSendCommand with DB7-DB0 data to move cursor
-
-    lw      ra,  0[sp]
-    addi    sp, sp, 4
-
-    ret
 
 
 
@@ -79,7 +63,7 @@ whileChar
 
     ; print character
     mv      a0, s1
-    li      a1, WRITE_CTRL
+    li      a1, LIGHT | RS
     call    lcdSendCommand
 
     ; point to next character
@@ -88,61 +72,6 @@ whileChar
     j       whileChar  
 
 foundNull
-
-    ; Getting ra back and the callee saved registers
-    lw      s1,  0[sp]
-    lw      s0,  4[sp]
-    lw      ra,  8[sp]
-    addi    sp, sp, 12
-
-    ret
-
-
-
-
-; def waitLcdIdle(): a function that waits and checks for the LCD to be idle
-
-; local variables
-; s0 = LCD_DATA
-; s1 = Enable on
-; s2 = Enable off
-; s3 = bit mask
-; s4 = status byte
-
-waitLcdIdle
-    ; save ra and s registers
-    subi    sp, sp, 12
-    sw      ra,  8[sp]  ; saving return address
-    sw      s0,  4[sp]  ; s registers calee saved - saving it before executing anything and restoring when done
-    sw      s1,   [sp]
-
-    li s0, LCD_DATA
-
-    ; Set to read control with data bus direction as input
-    li t0, LIGHT | RW 
-    sb t0, 1[s0]
-
-STEP_2
-    ; Enable signal 1
-    li t0, LIGHT | E | RW 
-    sb t0, 1[s0]
-
-    ; Delay to stretch pulse
-    call waiting_loop
-
-    ; Read LCD status byte
-    lw s1, [s0]
-
-    ; Enable signal 0
-    li t0, LIGHT | RW 
-    sb t0, 1[s0]
-
-    ; Delay to separate enable pulses
-    call waiting_loop
-
-    ; If bit 7 high repeat from step 2
-    andi    s1, s1, LCD_BUSY
-    bnez    s1, STEP_2
 
     ; Getting ra back and the callee saved registers
     lw      s1,  0[sp]
@@ -166,54 +95,72 @@ STEP_2
 ; s0 = LCD_DATA
 lcdSendCommand
 
-    subi    sp, sp, 8
-    sw      ra,  4[sp]  ; saving return address
-    sw      s0,  0[sp]  ; s register calee saved - saving it before executing anything and restoring when done
+    subi    sp, sp, 12
+    sw      ra,  8[sp]  ; saving return address
+    sw      s0,  4[sp]  ; s register calee saved - saving it before executing anything and restoring when done
+    sw      s1,  0[sp]
 
 
-    subi    sp, sp, 8
-    sw      a0,  4[sp]  ; caller saved
-    sw      a1,  0[sp]
-
-    call waitLcdIdle
-
-    lw      a1,  0[sp]
-    lw      a0,  4[sp]
-    addi    sp, sp, 8
-
+    ; Waiting for lcd to be idle
 
     li s0, LCD_DATA
 
-    ; Set to write data with data bus direction as output
-    sb a1, 1[s0]
+    ; Set to read control with data bus direction as input
+    li t0, LIGHT | RW 
+    sb t0, LCD_REG_CTRL[s0]
 
-    ; Output desired byte
-    sw a0, 0[s0]
-
+STEP_2
     ; Enable signal 1
-    ori a1, a1, E
-    sb a1, 1[s0]
+    li t0, LIGHT | E | RW 
+    sb t0, LCD_REG_CTRL[s0]
 
     ; Delay to stretch pulse
-    subi    sp, sp, 8
-    sw      a0,  4[sp]  ; caller saved
-    sw      a1,  0[sp]
-
     call waiting_loop
 
-    lw      a1,  0[sp]
-    lw      a0,  4[sp]
-    addi    sp, sp, 8
+    ; Read LCD status byte
+    lw s1, LCD_REG_DATA[s0]
 
+    ; Enable signal 0
+    li t0, LIGHT | RW 
+    sb t0, LCD_REG_CTRL[s0]
+
+    ; Delay to separate enable pulses
+    call waiting_loop   ; not saving a registers becase we know for sure waiting loop only uses t0
+
+    ; If bit 7 high repeat from step 2
+    andi    s1, s1, LCD_BUSY
+    bnez    s1, STEP_2
+
+
+    ; Actual printing
+
+    ; Set to write data with data bus direction as output
+    sb a1, LCD_REG_CTRL[s0]
+
+    ; Output desired byte
+    sw a0, LCD_REG_DATA[s0]
+
+    ; Enable signal 1
+    ori t0, a1, E
+    sb t0, LCD_REG_CTRL[s0]
+
+    ; Delay to stretch pulse
+    subi    sp, sp, 4
+    sw      a1,  0[sp]  ; caller saved, only a1 needed after the call so not saving a0
+
+    call waiting_loop   ; not saving a registers becase we know for sure waiting loop only uses t0
+
+    lw      a1,  0[sp]
+    addi    sp, sp, 4
 
     ; Disable signal 0
-    andi    a1, a1, ~E 
-    sb a1, 1[s0]
+    sb a1, LCD_REG_CTRL[s0]
 
     ; Getting ra back and the callee saved registers
-    lw      s0,  0[sp]
-    lw      ra,  4[sp]
-    addi    sp, sp, 8
+    lw      s1,  0[sp]
+    lw      s0,  4[sp]
+    lw      ra,  8[sp]
+    addi    sp, sp, 12
 
     ret
 
@@ -231,52 +178,3 @@ loop_point
     subi t0, t0, 0b1
     bnez t0, loop_point
     jr  ra
-
-
-
-; def printDec
-
-; 
-printDec
-    subi    sp, sp, 12
-    sw      ra,  8[sp]
-    sw      s0,  4[sp]
-    sw      s1,  0[sp]
-
-    mv      s0, a0          ; s0 = value
-    li      s1, 0           ; s1 = digit count
-
-    ; Special case: if value == 0, print '0' and return
-    bnez    s0, dec_loop
-    li      a0, '0'
-    li      a1, WRITE_CTRL
-    call    lcdSendCommand
-    j       dec_done
-
-dec_loop
-    li      t1, 10
-    remu    t0, s0, t1      ; t0 = s0 % 10
-    divu    s0, s0, t1      ; s0 = s0 / 10
-    addi    t0, t0, '0'     ; ASCII digit
-
-    subi    sp, sp, 4
-    sw      t0, 0[sp]       ; push ASCII digit as a word
-    addi    s1, s1, 1
-    bnez    s0, dec_loop
-
-print_loop
-    ; pop and print digits
-    lw      a0, 0[sp]
-    addi    sp, sp, 4
-    li      a1, WRITE_CTRL
-    call    lcdSendCommand
-
-    addi    s1, s1, -1
-    bnez    s1, print_loop
-
-dec_done
-    lw      s1,  0[sp]
-    lw      s0,  4[sp]
-    lw      ra,  8[sp]
-    addi    sp, sp, 12
-    ret

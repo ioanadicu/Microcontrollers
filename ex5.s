@@ -10,10 +10,7 @@
 ;       - uses DisplayOperations.s
 ;
 ;       Known bugs:
-;       - Move decprint to user space libary call
 ;		- See if I can get rid of more ecalls
-;		- ecall max auto calculation				v
-;		- Feedback from lab 3
 ;---------------------------------------------------------
 
 ORG				0x0000_0000
@@ -101,8 +98,6 @@ ecall_jump
 	defw 	ecall_7				; Print Hex
 	defw 	ecall_8				; bit 31 reset
 	defw 	ecall_9				; Print decimal
-	defw 	ecall_10			; Pause timer
-	defw 	ecall_11 			; Resume timer
 
 trap_handler_9		j 	. 		; Environment call from S-mode
 trap_handler_10		j 	. 		; Reserved
@@ -117,7 +112,7 @@ ecall_range			j	. 		; It jumps here if out of range
 
 ecall_0
 	li 		a0, CLEAR_DIS
-	li 		a1, CLEAR_CTRL
+	li 		a1, LIGHT
 	call 	lcdSendCommand
 	j 		ecall_exit
 
@@ -130,16 +125,18 @@ ecall_2
 	j 		ecall_exit
 
 ecall_3
-	call 	moveCursor
-	j 		ecall_exit
+	li 		a0, SHIFT_NEXT
+    li 		a1, LIGHT               ; using same controls as the ones when clearing the display
+    call 	lcdSendCommand          ; calling lcdSendCommand with DB7-DB0 data to move cursor
+	j 		ecall_exit 
 
 ecall_4
 	li 	    t0, MODULUS				; Setting the limit
 	li 		t1, TIME_PERIPH
-	sw		t0, 0x4[t1]
+	sw		t0, TIME_REG_LIMIT[t1]
 	
 	li 		t0, REGINIT
-	sw 		t0, 0x14[t1]	
+	sw 		t0, TIME_REG_CTRL [t1]	
 	j 		ecall_exit
 
 ecall_5
@@ -149,33 +146,25 @@ ecall_5
 
 ecall_6
 	li		t0, TIME_PERIPH
-	lw 		a0, OFFSETSTAT[t0]
+	lw 		a0, TIME_REG_STATUS[t0]
 	j 		ecall_exit
 
 ecall_7
-	; call 	PrintHex8
+	li 		t0, 0x8000_0000
+	li		t1, TIME_PERIPH
+	sw		t0, TIME_REG_CMD[t1]
 	j 		ecall_exit
 
 ecall_8
-	li 		t0, 0x8000_0000
+	li 		t0, 0b1
 	li		t1, TIME_PERIPH
-	sw		t0, 0x10[t1]
+	sw		t0, TIME_REG_CMD[t1]
 	j 		ecall_exit
 
 ecall_9
-	call 	printDec
-	j 		ecall_exit
-
-ecall_10
 	li 		t0, 0b1
 	li		t1, TIME_PERIPH
-	sw		t0, 0x10[t1]
-	j 		ecall_exit
-
-ecall_11
-	li 		t0, 0b1
-	li		t1, TIME_PERIPH
-	sw		t0, 0x14[t1]
+	sw		t0, TIME_REG_CTRL [t1]
 	j 		ecall_exit
 
 ecall_end
@@ -207,7 +196,6 @@ user_code
 
 ; Defining names to aid readability
 CLEAR_DIS       EQU     0b0000_0001         ; DB7-DB0 data to clear the display
-CLEAR_CTRL      EQU     0b1000              ; Controls when we want to clear the display
 
 ;SECOND 			EQU 	0x98967F
 SECOND 			EQU 	0x18967F
@@ -218,7 +206,11 @@ BUTTONS			EQU		0x0001_0001
 BTTN1			EQU 	0b0001
 BTTN2 			EQU     0b0010
 BTTN3 			EQU 	0b0100
-OFFSETSTAT		EQU     0x0C
+
+TIME_REG_LIMIT      EQU     0x04
+TIME_REG_STATUS     EQU     0x0C
+TIME_REG_CMD        EQU     0x10
+TIME_REG_CTRL       EQU     0x14
 
 str1            defb    "Press button SW1\0"    ; String that we want to print
                 align
@@ -254,6 +246,8 @@ str2            defb    "Time passed:\0"
 user_stack           defs    100                 ; Defining a chunk of memory (100 bytes) to be used for the stack
 user_stack_base      align                       ; This label is 'just after' the stack base - FULL DESCENDING
 
+INCLUDE UserSpaceLib.s     ; Library with Display Operations
+
 ; def start() - main function
 
 ; local variables
@@ -264,188 +258,80 @@ user_stack_base      align                       ; This label is 'just after' th
 ; s2 = hours
 
 START
-	; Clearing the display - we're calling lcdSendCommand for this but with the special clearing signals
-    li 		a7, 0
-	ecall
+	call displayStartScreen
 
-    ; calling printString function with string1 as argument
-    la 		a0, str1
-	li 		a7, 2
-	ecall
-
-	li		a7, 3					; next line
-	ecall
-
-	la 		a0, str11
-	li 		a7, 2
-	ecall
-
-waitUntilBttn
+waitForStart
 	li 		a7, 5
 	ecall
 	
-	andi	a0, a0, BTTN1			; Check if button 1 is pressed so we can start our loop
-	beqz	a0, waitUntilBttn
+	andi	a0, a0, BTTN1		; Check if button 1 is pressed so we can start our loop
+	beqz	a0, waitForStart
 
-resetCounter
-	li		s0, 0
-	li		s1, 0
-	li 		s2, 0
+	li		s0, 0				; Seconds
+	li		s1, 0				; Minutes
+	li 		s2, 0				; Hours
 	
 	li		a7, 4
 	ecall
 
-printTimer
+running
+	call displayTime
 
-	li 		a7, 0
-	ecall							;clear sc
-
-	la 		a0, strw
-	li 		a7, 2
-	ecall
-
-	li		a7, 3					; next line
-	ecall
-
-	mv      a0, s2
-	li      a7, 9					; print hours
-	ecall
-
-	la 		a0, strh				; print string
-	li 		a7, 2
-	ecall
-
-	mv      a0, s1
-	li      a7, 9					; print hours
-	ecall
-
-	la 		a0, strm				; print string
-	li 		a7, 2
-	ecall
-
-	mv      a0, s0
-	li      a7, 9					; print hours
-	ecall
-
-	la 		a0, strs				; print string
-	li 		a7, 2
-	ecall
-
-waitUntilReached
-
-checkPause
+waitForCycle
 	; check if pause button SW2 is pressed
 	li		a7, 5
 	ecall 
 	andi    a0, a0, BTTN2
 	bnez    a0, paused
 
+	; check timer status
 	li		a7, 6
 	ecall
 	
-	bgez	a0, waitUntilReached	; Chekcing bit 31 if 1 (completed a loop) else 
+	bgez	a0, waitForCycle	; Chekcing bit 31 if 1 (completed a loop) else 
 
-	li 		a7, 8					; bit 31 reset
+	li 		a7, 7				; bit 31 reset
 	ecall
 
-	; check if seconds > 60
-	addi	s0, s0, 0b1
-	li		t0, 0x3C
-	blt		s0, t0, nomod
+	; increment time
+	addi	s0, s0, 1
+	li		t0, 60
+	blt		s0, t0, running
 
-	subi 	s0, s0, 0x3C
-	addi 	s1, s1, 0b1
+	li      s0, 0
+    addi    s1, s1, 1
+    blt     s1, t0, running
 
-	; check if minutes > 60
-	blt 	s1, t0, nomod
-	subi 	s1, s1, 0x3C
-	addi 	s2, s2, 0b1
-
-nomod	
-
-	li 		a7, 0
-	ecall							;clear sc
-
-
-	la 		a0, strw
-	li 		a7, 2
-	ecall
-
-	li		a7, 3					; next line
-	ecall
-
-	mv      a0, s2
-	li      a7, 9					; print hours
-	ecall
-
-	la 		a0, strh				; print string
-	li 		a7, 2
-	ecall
-
-	mv      a0, s1
-	li      a7, 9					; print hours
-	ecall
-
-	la 		a0, strm				; print string
-	li 		a7, 2
-	ecall
-
-	mv      a0, s0
-	li      a7, 9					; print hours
-	ecall
-
-	la 		a0, strs				; print string
-	li 		a7, 2
-	ecall
-
-	j waitUntilReached
+    li      s1, 0
+    addi    s2, s2, 1
+    j       running
 
 paused
+    li      a7, 8             	; pause timer
+    ecall
 
-	;disable clock
-	li 		a7, 10					; deenable clock
-	ecall
+    call    displayPauseScreen
 
-	li 		a7, 0
-	ecall							;clear sc
+waitPausedInput
+    ; resume on SW1
+    li      a7, 5
+    ecall
+    andi    a0, a0, BTTN1
+    bnez    a0, resumeTimer
 
-	la 		a0, strp1				; print string
-	li 		a7, 2
-	ecall
+    ; reset on SW3
+    li      a7, 5
+    ecall
+    andi    a0, a0, BTTN3
+    bnez    a0, START
 
-	li		a7, 3					; next line
-	ecall
+    j       waitPausedInput
 
-	la 		a0, strp2				; print string
-	li 		a7, 2
-	ecall
+resumeTimer
+    li      a7, 9              	; resume timer
+    ecall
+    j       running
 
-next_state
-	; check if pause button SW2 is pressed
-	li		a7, 5
-	ecall 
-	andi    a0, a0, BTTN1
-	beqz    a0, chkrst
-
-	; enable clock
-	li 		a7, 11
-	ecall
-
-	j printTimer
-
-chkrst
-	; check if pause button SW3 is pressed
-	li		a7, 5
-	ecall 
-	andi    a0, a0, BTTN3
-	beqz    a0, next_state
-
-	j 		START
-
-	j paused
-
-J END
-
-
+j 	END
 
 END J . ; infinite loop to stop the program
