@@ -15,7 +15,8 @@
 ;       Display documentation: https://cdn.sparkfun.com/assets/9/5/f/7/b/HD44780.pdf
 ;
 ;       Known bugs:
-;       - none
+;       - name offsets
+;       - delay different times?
 ;
 ;-----------------------------------------------------------------------------
 
@@ -110,18 +111,12 @@ foundNull
 
 waitLcdIdle
     ; save ra and s registers
-    subi    sp, sp, 24
-    sw      ra, 20[sp]  ; saving return address
-    sw      s0, 16[sp]  ; s registers calee saved - saving it before executing anything and restoring when done
-    sw      s1, 12[sp]
-    sw      s2,  8[sp]
-    sw      s3,  4[sp]
-    sw      s4,  0[sp]
+    subi    sp, sp, 12
+    sw      ra,  8[sp]  ; saving return address
+    sw      s0,  4[sp]  ; s registers calee saved - saving it before executing anything and restoring when done
+    sw      s1,   [sp]
 
     li s0, LCD_DATA
-    ; li s1, LIGHT | E | RW   ; control signals with E=1
-    ; li s2, LIGHT | RW       ; control signals with E=0
-    ;li s3, LCD_BUSY        ; bit 7 mask
 
     ; Set to read control with data bus direction as input
     li t0, LIGHT | RW 
@@ -136,7 +131,7 @@ STEP_2
     call waiting_loop
 
     ; Read LCD status byte
-    lw s4, [s0]
+    lw s1, [s0]
 
     ; Enable signal 0
     li t0, LIGHT | RW 
@@ -146,17 +141,14 @@ STEP_2
     call waiting_loop
 
     ; If bit 7 high repeat from step 2
-    andi    s4, s4, LCD_BUSY
-    bnez    s4, STEP_2
+    andi    s1, s1, LCD_BUSY
+    bnez    s1, STEP_2
 
     ; Getting ra back and the callee saved registers
-    lw      s4,  0[sp]  
-    lw      s3,  4[sp]
-    lw      s2,  8[sp]
-    lw      s1, 12[sp]
-    lw      s0, 16[sp]
-    lw      ra, 20[sp]
-    addi    sp, sp, 24
+    lw      s1,  0[sp]
+    lw      s0,  4[sp]
+    lw      ra,  8[sp]
+    addi    sp, sp, 12
 
     ret
 
@@ -199,7 +191,7 @@ lcdSendCommand
     sw a0, 0[s0]
 
     ; Enable signal 1
-    addi a1, a1, 4
+    ori a1, a1, E
     sb a1, 1[s0]
 
     ; Delay to stretch pulse
@@ -215,7 +207,7 @@ lcdSendCommand
 
 
     ; Disable signal 0
-    subi a1, a1, 4
+    andi    a1, a1, ~E 
     sb a1, 1[s0]
 
     ; Getting ra back and the callee saved registers
@@ -242,7 +234,9 @@ loop_point
 
 
 
-; def printdec
+; def printDec
+
+; 
 printDec
     subi    sp, sp, 12
     sw      ra,  8[sp]

@@ -3,22 +3,22 @@
 # SW Build 5076996 on Wed May 22 18:36:09 MDT 2024
 # IP Build 5075265 on Wed May 22 21:45:21 MDT 2024
 # SharedData Build 5076995 on Wed May 22 18:29:18 MDT 2024
-# Start of session at: Tue Mar 10 14:15:31 2026
-# Process ID: 49263
+# Start of session at: Tue Mar 10 09:13:25 2026
+# Process ID: 6366
 # Current directory: /home/y26054md/Microcontrollers
-# Command line: vivado -mode batch -source /tmp/load_riscv_board.LMH2yd.tcl
+# Command line: vivado -mode batch -source /tmp/load_riscv_board.VLnArW.tcl
 # Log file: /home/y26054md/Microcontrollers/vivado.log
 # Journal file: /home/y26054md/Microcontrollers/vivado.jou
-# Running On        :e-c11kilf90023
+# Running On        :e-c11kilf90022
 # Platform          :Ubuntu
 # Operating System  :Ubuntu 24.04.4 LTS
 # Processor Detail  :Intel(R) Core(TM) i7-8700 CPU @ 3.20GHz
-# CPU Frequency     :899.909 MHz
+# CPU Frequency     :4299.628 MHz
 # CPU Physical cores:6
 # CPU Logical cores :12
-# Host memory       :33514 MB
+# Host memory       :33480 MB
 # Swap memory       :8589 MB
-# Total Virtual     :42103 MB
-# Available Virtual :39295 MB
+# Total Virtual     :42070 MB
+# Available Virtual :40228 MB
 #-----------------------------------------------------------
-source /tmp/load_riscv_board.LMH2yd.tcl
+source /tmp/load_riscv_board.VLnArW.tcl

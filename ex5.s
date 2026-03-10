@@ -21,7 +21,7 @@ J 				initialisation
 
 ecall_max		EQU 		(ecall_end - ecall_0) / 4
 
-INCLUDE DisplayOperations.s                 ; Library with Display Operations
+INCLUDE DisplayOperations.s     ; Library with Display Operations
 
 ;---------------------------------------------------------
 ; OS SECTION - Machine mode
