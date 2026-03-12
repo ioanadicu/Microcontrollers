@@ -2,7 +2,7 @@ KMD
 00000000:             ; ; =============================================================================
 00000000:             ; ; Exercise 4: System Calls
 00000000:             ; ; Maria-Ioana Dicu
-00000000:             ; ; 26 February 2026
+00000000:             ; ; 12 March 2026
 00000000:             ; ;
 00000000:             ; ; A simple timer application adapted to run in user mode within a primitive OS.
 00000000:             ; ; The machine-mode section sets up trap handling and dispatches system calls,
@@ -17,12 +17,16 @@ KMD
 00000000:             ; ;     repetition and keep the main application clearer.
 00000000:             ; ; =============================================================================
 00000000:             ; 
+00000000:             ; 
+00000000:             ; ; =============================================================================
+00000000:             ; ; OS SECTION
+00000000:             ; ; Machine mode
+00000000:             ; ; =============================================================================
+00000000:             ; 
 00000000:             ; ORG                             0x0000_0000
-00000000: 0CC0006F    ; J                               initialisation
+00000000: 0CC0006F    ; j                               initialisation
 00000004:             ; 
-00000004:             ; ecall_max               EQU             (ecall_end - ecall_0) / 4
-00000004:             ; 
-00000004:             ; INCLUDE DisplayOperations.s     ; Library with Display Operations
+00000004:             ; INCLUDE         DisplayOperations.s     ; Library with Display Operations
 00000004:             ; ; =============================================================================
 00000004:             ; ; Display Operations Library
 00000004:             ; ; Maria-Ioana Dicu
@@ -112,15 +116,15 @@ KMD
 0000004C:             ; ; =============================================================================
 0000004C:             ; ; lcdSendCommand
 0000004C:             ; ; =============================================================================
-0000004C:             ; ; Sends either data byte or a command to the LCD.
+0000004C:             ; ; Sends either data or a command to the LCD.
 0000004C:             ; ;
 0000004C:             ; ; Input:
-0000004C:             ; ;   a0 = byte to send (character or command)
+0000004C:             ; ;   a0 = character or command to send
 0000004C:             ; ;   a1 = control signals, with E initially low
 0000004C:             ; ;
 0000004C:             ; ; Registers used:
 0000004C:             ; ;   s0 = LCD base address
-0000004C:             ; ;   s1 = LCD status value
+0000004C:             ; ;   s1 = LCD status
 0000004C:             ; ; =============================================================================
 0000004C:             ; 
 0000004C:             ; lcdSendCommand
@@ -138,26 +142,27 @@ KMD
 00000060: 10040413    ; 
 00000064:             ; 
 00000064:             ;     ; Configure LCD for control read with data bus as input
-00000064: 00900293    ;     li t0, LIGHT | RW 
-00000068: 005400A3    ;     sb t0, LCD_REG_CTRL[s0]
+00000064: 00900293    ;     li      t0, LIGHT | RW 
+00000068: 005400A3    ;     sb      t0, LCD_REG_CTRL[s0]
 0000006C:             ; 
 0000006C:             ; STEP_2
 0000006C:             ;     ; Set enable high
-0000006C: 00D00293    ;     li t0, LIGHT | E | RW 
-00000070: 005400A3    ;     sb t0, LCD_REG_CTRL[s0]
+0000006C: 00D00293    ;     li      t0, LIGHT | E | RW 
+00000070: 005400A3    ;     sb      t0, LCD_REG_CTRL[s0]
 00000074:             ; 
 00000074:             ;     ; Stretch enable pulse
-00000074: 048000EF    ;     call waiting_loop
+00000074: 048000EF    ;     call    waiting_loop
 00000078:             ; 
 00000078:             ;     ; Stretch enable pulse
-00000078: 00042483    ;     lw s1, LCD_REG_DATA[s0]
+00000078: 00042483    ;     lw      s1, LCD_REG_DATA[s0]
 0000007C:             ; 
 0000007C:             ;     ; Set enable low
-0000007C: 00900293    ;     li t0, LIGHT | RW 
-00000080: 005400A3    ;     sb t0, LCD_REG_CTRL[s0]
+0000007C: 00900293    ;     li      t0, LIGHT | RW 
+00000080: 005400A3    ;     sb      t0, LCD_REG_CTRL[s0]
 00000084:             ; 
 00000084:             ;     ; Separate enable pulses
-00000084: 038000EF    ;     call waiting_loop   ; waiting_loop only uses t0 so not saving registers (intentional)
+00000084:             ;             ; waiting_loop only uses t0 so not saving registers (intentional)  
+00000084: 038000EF    ;     call    waiting_loop
 00000088:             ; 
 00000088:             ;     ; Repeat while bit 7 high
 00000088: 0804F493    ;     andi    s1, s1, LCD_BUSY
@@ -169,20 +174,21 @@ KMD
 00000090:             ;     ; -------------------------------------------------------------------------
 00000090:             ; 
 00000090:             ;     ; Configure LCD for control read with data bus as output
-00000090: 00B400A3    ;     sb a1, LCD_REG_CTRL[s0]
+00000090: 00B400A3    ;     sb      a1, LCD_REG_CTRL[s0]
 00000094:             ; 
 00000094:             ;     ; Write byte to data register
-00000094: 00A42023    ;     sw a0, LCD_REG_DATA[s0]
+00000094: 00A42023    ;     sw      a0, LCD_REG_DATA[s0]
 00000098:             ; 
 00000098:             ;     ; Pulse enable high
-00000098: 0045E293    ;     ori t0, a1, E
-0000009C: 005400A3    ;     sb t0, LCD_REG_CTRL[s0]
+00000098: 0045E293    ;     ori     t0, a1, E
+0000009C: 005400A3    ;     sb      t0, LCD_REG_CTRL[s0]
 000000A0:             ; 
 000000A0:             ;     ; Delay to stretch pulse
-000000A0: 01C000EF    ;     call waiting_loop   ; waiting_loop only uses t0 so not saving registers (intentional)
+000000A0:             ;             ; waiting_loop only uses t0 so not saving registers (intentional)
+000000A0: 01C000EF    ;     call    waiting_loop
 000000A4:             ; 
 000000A4:             ;     ; Disable signal 0
-000000A4: 00B400A3    ;     sb a1, LCD_REG_CTRL[s0]
+000000A4: 00B400A3    ;     sb      a1, LCD_REG_CTRL[s0]
 000000A8:             ; 
 000000A8:             ;     ; Restore saved registers and return
 000000A8: 00012483    ;     lw      s1,  0[sp]
@@ -196,29 +202,34 @@ KMD
 000000BC:             ; ; =============================================================================
 000000BC:             ; ; waiting_loop
 000000BC:             ; ; =============================================================================
-000000BC:             ; ; Small software delay used for LCD timing.
+000000BC:             ; ; Small delay used for LCD timing.
 000000BC:             ; ;
 000000BC:             ; ; Registers used:
 000000BC:             ; ;   t0 = delay counter
 000000BC:             ; ; =============================================================================
 000000BC:             ; 
 000000BC:             ; waiting_loop
-000000BC: 69000293    ;     li t0, DELAY
+000000BC: 69000293    ;     li      t0, DELAY
 000000C0:             ; loop_point
-000000C0: FFF28293    ;     subi t0, t0, 0b1
-000000C4: FE029EE3    ;     bnez t0, loop_point
-000000C8: 00008067    ;     jr  ra
+000000C0: FFF28293    ;     subi    t0, t0, 0b1
+000000C4: FE029EE3    ;     bnez    t0, loop_point
+000000C8: 00008067    ;     jr      ra
 000000CC:             ; 
 000000CC:             ; 
 000000CC:             ; 
 000000CC:             ; ; =============================================================================
-000000CC:             ; ; OS SECTION
-000000CC:             ; ; Machine mode
+000000CC:             ; ; Constants
 000000CC:             ; ; =============================================================================
+000000CC:             ; 
+000000CC:             ; mppMask                 EQU             0x18967F
+000000CC:             ; ecall_max               EQU             (ecall_end - ecall_0) / 4
+000000CC:             ; 
+000000CC:             ; bit0                    EQU         0b1
+000000CC:             ; bit31                   EQU             0x8000_0000
 000000CC:             ; 
 000000CC:             ; initialisation
-000000CC: 000022B7    ;         li              t0, 0x0000_1800         ; Load MPP mask - bits 12 & 11
-000000D0: 80028293    ; 
+000000CC: 001892B7    ;         li              t0, mppMask                     ; Load MPP mask - bits 12 & 11
+000000D0: 67F28293    ; 
 000000D4: 3002B073    ;         csrc    MSTATUS, t0                     ; Clear MPP bits in status
 000000D8: 00000297    ;         la              t0, mhandler            ; Point at trap handler code start
 000000DC: 03028293    ; 
@@ -378,21 +389,21 @@ KMD
 00000270: 0400006F    ;         j               ecall_exit
 00000274:             ; 
 00000274:             ; ecall_7                                                 ; Bit 31 reset
-00000274: 800002B7    ;         li              t0, 0x8000_0000
+00000274: 800002B7    ;         li              t0, bit31
 00000278: 00010337    ;         li              t1, TIME_PERIPH
 0000027C: 20030313    ; 
 00000280: 00532823    ;         sw              t0, TIME_REG_CMD[t1]
 00000284: 02C0006F    ;         j               ecall_exit
 00000288:             ; 
 00000288:             ; ecall_8                                                 ; Pause timer
-00000288: 00100293    ;         li              t0, 0b1
+00000288: 00100293    ;         li              t0, bit0
 0000028C: 00010337    ;         li              t1, TIME_PERIPH
 00000290: 20030313    ; 
 00000294: 00532823    ;         sw              t0, TIME_REG_CMD[t1]
 00000298: 0180006F    ;         j               ecall_exit
 0000029C:             ; 
 0000029C:             ; ecall_9                                                 ; Resume timer
-0000029C: 00100293    ;         li              t0, 0b1
+0000029C: 00100293    ;         li              t0, bit0
 000002A0: 00010337    ;         li              t1, TIME_PERIPH
 000002A4: 20030313    ; 
 000002A8: 00532A23    ;         sw              t0, TIME_REG_CTRL [t1]
@@ -424,6 +435,7 @@ KMD
 000002D4:             ; 
 000002D4:             ; mstack                  defs    100
 00000338:             ; mstack_base             align
+00000338:             ; 
 00000338:             ; 
 00000338:             ; 
 00000338:             ; 
@@ -465,14 +477,14 @@ KMD
 0004000C:             ; ; Strings
 0004000C:             ; ; -----------------------------------------------------------------------------
 0004000C:             ; 
-0004000C: 50 72 65 73 ; startLine1      defb    "Press button SW1\0"    ; String that we want to print
+0004000C: 50 72 65 73 ; startLine1      defb    "Press button SW1\0"
 00040010: 73 20 62 75 ; 
 00040014: 74 74 6F 6E ; 
 00040018: 20 53 57 31 ; 
 0004001C: 00          ; 
 00040020:             ;                 align
 00040020:             ; 
-00040020: 20 74 6F 20 ; startLine2      defb    " to start.\0"    ; String that we want to print
+00040020: 20 74 6F 20 ; startLine2      defb    " to start.\0"
 00040024: 73 74 61 72 ; 
 00040028: 74 2E 00    ; 
 0004002C:             ;                 align
@@ -643,7 +655,7 @@ KMD
 0004015C: 00000893    ;     li      a7, 0
 00040160: 00000073    ;     ecall
 00040164:             ; 
-00040164:             ;     ; Prints "Current time: "
+00040164:             ;     ; Print "Current time: "
 00040164: 00000517    ;     la      a0, runLine1
 00040168: EC850513    ; 
 0004016C: 00200893    ;     li      a7, 2
@@ -798,7 +810,7 @@ KMD
 00040280:             ; ; =============================================================================
 00040280:             ; 
 00040280:             ; running
-00040280: ED5FF0EF    ;         call displayTime
+00040280: ED5FF0EF    ;         call    displayTime
 00040284:             ; 
 00040284:             ; waitForCycle
 00040284:             ;         ; Check whether SW2 is pressed to pause
@@ -844,12 +856,14 @@ KMD
 000402D8:             ;     ; Check whether SW1 is pressed to resume
 000402D8: 00500893    ;     li      a7, 5
 000402DC: 00000073    ;     ecall
+000402E0:             ;         
 000402E0: 00157513    ;     andi    a0, a0, BTTN1
 000402E4: 00051C63    ;     bnez    a0, resumeTimer
 000402E8:             ; 
 000402E8:             ;     ; Check whether SW3 is pressed to reset
 000402E8: 00500893    ;     li      a7, 5
 000402EC: 00000073    ;     ecall
+000402F0:             ; 
 000402F0: 00457513    ;     andi    a0, a0, BTTN3
 000402F4: F60512E3    ;     bnez    a0, START
 000402F8:             ; 
@@ -871,7 +885,6 @@ KMD
 00040310:             ; 
 
 Symbol Table: Labels
-: ecall_max                         0000002B  Value
 : LCD_DATA                          00010100  Value
 : LCD_BUSY                          00000080  Value
 : DELAY                             00000690  Value
@@ -889,6 +902,10 @@ Symbol Table: Labels
 : STEP_2                            0000006C  Label
 : waiting_loop                      000000BC  Label
 : loop_point                        000000C0  Label
+: mppMask                           0018967F  Value
+: ecall_max                         0000002B  Value
+: bit0                              00000001  Value
+: bit31                             80000000  Value
 : initialisation                    000000CC  Label
 : mhandler                          00000108  Label
 : trap_table                        0000013C  Label

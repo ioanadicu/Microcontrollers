@@ -95,7 +95,7 @@ printLoop
     li      a7, 1
     ecall 
 
-    addi    s1, s1, -1s
+    addi    s1, s1, -1
     bnez    s1, printLoop
 
 decDone
