@@ -38,13 +38,53 @@ ecall_max		EQU 		(ecall_end - ecall_0) / 4
 bit0			EQU         0b1
 bit31 			EQU 		0x8000_0000
 
+MSTATUS_MIE		EQU 		0x8			; Bit 3
+MIE_MEIE 		EQU 		0x800    	; MEIE bit 11
+
+INTR_CTRL		EQU 		0x0001_0400
+INTR_EN			EQU 		0x04
+INTR_RQ			EQU 		0x08 
+INTR_MODE 		EQU 		0x0C
+
+TIMER_INT		EQU 		0b00_0001_0000
+BUTTON_INT		EQU 		0b00_0010_0000
 initialisation
 	li 		t0, mppMask			; Load MPP mask - bits 12 & 11
 	csrc	MSTATUS, t0			; Clear MPP bits in status
+
 	la 		t0, mhandler		; Point at trap handler code start
 	csrw 	MTVEC, t0			; Save address in system CSR
+
 	la 		t0, mstack_base		; Point at machine stack
 	csrw 	MSCRATCH, t0		; Copy 'machine' SP for use in handler
+
+	; Timer config
+	li 	    t0, MODULUS	
+	li 		t1, TIME_PERIPH
+	sw		t0, TIME_REG_LIMIT[t1]
+
+	li		t0, 0b1011
+	sw		t0, TIME_REG_CTRL[t1]
+
+	li		t0, bit31
+	sw		t0, TIME_REG_CMD[t1]
+
+	; Interrupt controller setup
+	li		t1, INTR_CTRL
+	li		t0, 0
+	sw		t0, INTR_MODE[t1]	; level-sensitive inputs
+
+	li 		t0, TIMER_INT
+	sw 		t0, INTR_EN[t1]		; enable the timer interrupt
+	; Enable machine external interrupts
+	li		t0, MIE_MEIE
+	csrs	MIE, t0
+
+	li		t0, MSTATUS_MIE
+	csrs 	MSTATUS, t0
+
+
+	; Entrer user mode
 	la 		sp, user_stack_base	; Change SP to user space
 	la 		ra, user_code		; Point at user code start
 	csrw 	MEPC, ra			; Save as 'return address'
@@ -63,6 +103,15 @@ mhandler
 	sw 		ra, 0[sp]
 
 	csrr 	t0, MCAUSE			; Read why we came here
+	bgez	t0, handle_trap		; 
+
+	; Interrupt path
+	andi 	t0, t0, 0xF			; Clear upper bits
+	li 		t1, 11
+	beq		t0, t1, interrupt_11	; Only focused on 11
+	j 		interrupt_exit		; Ignoring others
+
+handle_trap
 	andi 	t0, t0, 0xF			; Cautious - guarantees in range
 	la 		t1, trap_table		; Pointer to table
 	slli 	t0, t0, 2			; Multiply cause to word offset
@@ -70,6 +119,85 @@ mhandler
 	lw 		t1, [t1]			; Get handler address
 	jr 		t1					; Call specific handler (RA is implicit)
 
+
+; =============================================================================
+; Interrupts dispatch table
+; =============================================================================
+
+intterupt_table
+	defw 	interrupt_0			; User software interrupt
+	defw 	interrupt_1			; Supervisor software interrupt
+	defw 	interrupt_2			; Reserved
+	defw 	interrupt_3			; Machine software interrupt
+	defw 	interrupt_4			; User timer interrupt
+	defw 	interrupt_5			; Supervisor timer interrupt
+	defw 	interrupt_6			; Reserved
+	defw 	interrupt_7			; Machine timer interrupt
+	defw 	interrupt_8			; User external interrupt
+	defw 	interrupt_9			; Supervisor external interrupt
+	defw 	interrupt_10		; Reserved
+	defw 	interrupt_11		; Machine external interrupt
+
+; =============================================================================
+; Interrupt handlers
+; =============================================================================
+
+interrupt_0			j 		interrupt_exit	
+interrupt_1			j 		interrupt_exit	
+interrupt_2			j 		interrupt_exit	
+interrupt_3			j 		interrupt_exit	
+interrupt_4			j 		interrupt_exit	
+interrupt_5			j 		interrupt_exit	
+interrupt_6			j 		interrupt_exit	
+interrupt_7			j 		interrupt_exit	
+interrupt_8			j 		interrupt_exit	
+interrupt_9			j 		interrupt_exit	
+interrupt_10		j 		interrupt_exit	
+interrupt_11		j 		.		
+	; Read interrupt controller to see source
+	li		t0, INTR_CTRL
+	lw		t1, INTR_RQ[t0]
+
+	; Timer bit check
+	andi	t2, t1, TIMER_INT
+	beqz	t2, interrupt_exit
+
+	; Aknowledge
+	li		t0, TIME_PERIPH
+	li		t2, bit31
+	sw		t2, TIME_REG_CMD[t0]
+
+	; Tell user
+	la		t0, tick_flag
+	li 		t1, 1
+	sw		t1, [t0]
+
+	j 		interrupt_exit
+	; This is the one we're going to concentrate on
+	; ? bit 3 in MIE must be set before any interrupt will be accepted
+	; ?? when trap is taken MIE is cleared disabling interrupts with prev state copied into MPIE (bit 7 in MSTATUS), restored when MRET 
+	; ? disable other interrupts
+	; require some working registers - save on stack 
+
+
+; =============================================================================
+; Interrupt Service Exit
+; =============================================================================
+
+	; reload any corrupted registers
+	; reverse interrupt entry sequence
+
+
+	; return directly to MEPC
+
+	lw 		ra, [sp]			; Pop working registers
+	lw		s0, 4[sp]
+	lw		s1, 8[sp]
+	addi 	sp, sp, 12
+
+	csrrw 	sp, MSCRATCH, sp	; Save Machine SP, get User SP
+
+	mret						; Return to user mode
 
 ; =============================================================================
 ; Trap dispatch table
@@ -117,9 +245,9 @@ trap_handler_8					; Environment call from U-mode
 	jr 		t0					;  and jump to it
 
 
-; =============================================================================
+; -----------------------------------------------------------------------------
 ; Ecall dispatch table
-; =============================================================================
+; -----------------------------------------------------------------------------
 
 ecall_jump
 	defw 	ecall_0				; Clear display
@@ -172,9 +300,15 @@ ecall_4							; Initialise counter
 	li 	    t0, MODULUS	
 	li 		t1, TIME_PERIPH
 	sw		t0, TIME_REG_LIMIT[t1]
-	
-	li 		t0, REGINIT
+
+	li		t0, 0b1011
 	sw 		t0, TIME_REG_CTRL [t1]	
+
+	li		t0, bit31
+	sw		t0, TIME_REG_CMD[t1]
+	
+	;li 		t0, REGINIT
+	;sw 		t0, TIME_REG_CTRL [t1]	
 	j 		ecall_exit
 
 ecall_5							; Read buttons
@@ -216,7 +350,13 @@ ecall_exit
 	csrrw 	t0, MEPC, t0		; Find the trapping instruction PC
 	addi 	t0, t0, 4			; Correct to a return address
 	csrrw 	t0, MEPC, t0		; Swap back in
+	j  		restore
 
+interrupt_exit
+	; Not incrementing MEPC here
+	j    	restore
+
+restore
 	lw 		ra, [sp]			; Pop working registers
 	lw		s0, 4[sp]
 	lw		s1, 8[sp]
@@ -335,6 +475,9 @@ waitForStart
 	li		s0, 0				; Seconds
 	li		s1, 0				; Minutes
 	li 		s2, 0				; Hours
+	
+	la		t0, tick_flag
+	sw 		zero, [t0]
 	
 	li		a7, 4				; Initialise counter
 	ecall
