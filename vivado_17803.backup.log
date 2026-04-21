@@ -3,27 +3,27 @@
 # SW Build 5076996 on Wed May 22 18:36:09 MDT 2024
 # IP Build 5075265 on Wed May 22 21:45:21 MDT 2024
 # SharedData Build 5076995 on Wed May 22 18:29:18 MDT 2024
-# Start of session at: Thu Mar 19 13:08:12 2026
-# Process ID: 22779
+# Start of session at: Tue Mar 17 09:27:08 2026
+# Process ID: 17803
 # Current directory: /home/y26054md/Microcontrollers
-# Command line: vivado -mode batch -source /tmp/load_riscv_board.IZQEhI.tcl
+# Command line: vivado -mode batch -source /tmp/load_riscv_board.500hWZ.tcl
 # Log file: /home/y26054md/Microcontrollers/vivado.log
 # Journal file: /home/y26054md/Microcontrollers/vivado.jou
-# Running On        :e-c11kilf90019
+# Running On        :e-c11kilf90022
 # Platform          :Ubuntu
 # Operating System  :Ubuntu 24.04.4 LTS
 # Processor Detail  :Intel(R) Core(TM) i7-8700 CPU @ 3.20GHz
-# CPU Frequency     :4299.045 MHz
+# CPU Frequency     :4300.023 MHz
 # CPU Physical cores:6
 # CPU Logical cores :12
 # Host memory       :33480 MB
 # Swap memory       :8589 MB
 # Total Virtual     :42070 MB
-# Available Virtual :38670 MB
+# Available Virtual :38795 MB
 #-----------------------------------------------------------
-source /tmp/load_riscv_board.IZQEhI.tcl
+source /tmp/load_riscv_board.500hWZ.tcl
 # open_hw_manager
-open_hw_manager: Time (s): cpu = 00:00:06 ; elapsed = 00:00:07 . Memory (MB): peak = 1434.992 ; gain = 117.926 ; free physical = 22277 ; free virtual = 36449
+open_hw_manager: Time (s): cpu = 00:00:06 ; elapsed = 00:00:07 . Memory (MB): peak = 1434.992 ; gain = 117.926 ; free physical = 22867 ; free virtual = 36582
 # connect_hw_server -allow_non_jtag 
 INFO: [Labtools 27-2285] Connecting to hw_server url TCP:localhost:3121
 INFO: [Labtools 27-2222] Launching hw_server...
@@ -48,7 +48,7 @@ INFO: [Labtools 27-2221] Launch Output:
 
 
 # open_hw_target 
-INFO: [Labtoolstcl 44-466] Opening hw_target localhost:3121/xilinx_tcf/Xilinx/0NK4BA
+INFO: [Labtoolstcl 44-466] Opening hw_target localhost:3121/xilinx_tcf/Xilinx/0NK46A
 # set_property PROGRAM.FILE {/cadtools5/questa_custom/bin/..//resource/comp22711/bitfiles/top.bit} [get_hw_devices xc7s50_0] 
 # current_hw_device [get_hw_devices xc7s50_0] 
 # refresh_hw_device -update_hw_probes false [lindex [get_hw_devices xc7s50_0] 0] 
@@ -60,4 +60,4 @@ INFO: [Labtools 27-1434] Device xc7s50 (JTAG device index = 0) is programmed wit
 INFO: [Labtools 27-3164] End of startup status: HIGH
 # refresh_hw_device [lindex [get_hw_devices xc7s50_0] 0]
 INFO: [Labtools 27-1434] Device xc7s50 (JTAG device index = 0) is programmed with a design that has no supported debug core(s) in it.
-INFO: [Common 17-206] Exiting Vivado at Thu Mar 19 13:08:38 2026...
+INFO: [Common 17-206] Exiting Vivado at Tue Mar 17 09:27:35 2026...

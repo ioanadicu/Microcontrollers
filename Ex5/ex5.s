@@ -1,11 +1,14 @@
 ; =============================================================================
-; Exercise 4: System Calls
+; Exercise 5: Counters and Timers
 ; Maria-Ioana Dicu
-; 12 March 2026
+; 24 April 2026
 ;
-; A simple timer application adapted to run in user mode within a primitive OS.
+; A stopwatch application adapted to run in user mode withn a primitive OS.
 ; The machine-mode section sets up trap handling and dispatches system calls,
 ; while the user-mode section contains the application logic.
+;
+; The program uses the hardware timer as a reference to count seconds
+; accurately, with board buttons used to start, pause, and reset the count.
 ;
 ; External libraries:
 ;   - DisplayOperations.s   : LCD routines
@@ -14,6 +17,7 @@
 ; Notes:
 ;   - The display-related logic was moved into helper libraries to reduce
 ;     repetition and keep the main application clearer.
+;   - Timer access is performed through ECALLs to preserve hardware abstraction.
 ; =============================================================================
 
 

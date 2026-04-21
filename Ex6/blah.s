@@ -31,11 +31,11 @@
 ; =============================================================================
 
 
-               ORG             0x0000_0000
-               j               initialisation
+        ORG             0x0000_0000
+        j               initialisation
 
 
-               INCLUDE         DisplayOperations.s
+        INCLUDE         DisplayOperations.s
 
 
 
@@ -100,70 +100,70 @@ ECALL_MAX       EQU             (ecall_end - ecall_0) / 4
 
 
 initialisation
-               li              t0, MPP_MASK
-               csrc            MSTATUS, t0          ; drop return privilege to U mode
+    li              t0, MPP_MASK
+    csrc            MSTATUS, t0          ; drop return privilege to U mode
 
 
-               la              t0, mhandler
-               csrw            MTVEC, t0
+    la              t0, mhandler
+    csrw            MTVEC, t0
 
 
-               la              t0, mstack_base
-               csrw            MSCRATCH, t0
+    la              t0, mstack_base
+    csrw            MSCRATCH, t0
 
 
-               ; -------------------------------------------------------------
-               ; Timer configuration: 1 second periodic interrupt
-               ; bit0 = enable
-               ; bit1 = modulus/reload mode
-               ; bit3 = interrupt output enable
-               ; -------------------------------------------------------------
-               li              t1, TIME_PERIPH
-               li              t0, MODULUS
-               sw              t0, TIME_REG_LIMIT[t1]
+    ; -------------------------------------------------------------
+    ; Timer configuration: 1 second periodic interrupt
+    ; bit0 = enable
+    ; bit1 = modulus/reload mode
+    ; bit3 = interrupt output enable
+    ; -------------------------------------------------------------
+    li              t1, TIME_PERIPH
+    li              t0, MODULUS
+    sw              t0, TIME_REG_LIMIT[t1]
 
 
-               li              t0, 0b1011
-               sw              t0, TIME_REG_CTRL[t1]
+    li              t0, 0b1011
+    sw              t0, TIME_REG_CTRL[t1]
 
 
-               ; Clear any stale terminal-count status before enabling IRQ flow
-               li              t0, BIT31
-               sw              t0, TIME_REG_CMD[t1]
+    ; Clear any stale terminal-count status before enabling IRQ flow
+    li              t0, BIT31
+    sw              t0, TIME_REG_CMD[t1]
 
 
-               ; -------------------------------------------------------------
-               ; Interrupt controller setup
-               ; local bit 4 = timer
-               ; leave mode register at 0 => level-sensitive inputs
-               ; -------------------------------------------------------------
-               li              t1, INT_CTRL
-               li              t0, 0
-               sw              t0, INT_MODE[t1]
+    ; -------------------------------------------------------------
+    ; Interrupt controller setup
+    ; local bit 4 = timer
+    ; leave mode register at 0 => level-sensitive inputs
+    ; -------------------------------------------------------------
+    li              t1, INT_CTRL
+    li              t0, 0
+    sw              t0, INT_MODE[t1]
 
 
-               li              t0, TIMER_INT_BIT
-               sw              t0, INT_ENABLES[t1]
+    li              t0, TIMER_INT_BIT
+    sw              t0, INT_ENABLES[t1]
 
 
-               ; -------------------------------------------------------------
-               ; Enable machine external interrupts
-               ; -------------------------------------------------------------
-               li              t0, MIE_MEIE
-               csrs            MIE, t0
+    ; -------------------------------------------------------------
+    ; Enable machine external interrupts
+    ; -------------------------------------------------------------
+    li              t0, MIE_MEIE
+    csrs            MIE, t0
 
 
-               li              t0, MSTATUS_MIE
-               csrs            MSTATUS, t0
+    li              t0, MSTATUS_MIE
+    csrs            MSTATUS, t0
 
 
-               ; -------------------------------------------------------------
-               ; Enter user mode
-               ; -------------------------------------------------------------
-               la              sp, user_stack_base
-               la              t0, user_code
-               csrw            MEPC, t0
-               mret
+    ; -------------------------------------------------------------
+    ; Enter user mode
+    ; -------------------------------------------------------------
+    la              sp, user_stack_base
+    la              t0, user_code
+    csrw            MEPC, t0
+    mret
 
 
 
@@ -174,25 +174,25 @@ initialisation
 
 
 mhandler
-               csrrw           sp, MSCRATCH, sp     ; swap user SP for machine SP
-               subi            sp, sp, 24
-               sw              ra,  0[sp]
-               sw              t0,  4[sp]
-               sw              t1,  8[sp]
-               sw              t2, 12[sp]
-               sw              s0, 16[sp]
-               sw              s1, 20[sp]
+    csrrw           sp, MSCRATCH, sp     ; swap user SP for machine SP
+    subi            sp, sp, 24
+    sw              ra,  0[sp]
+    sw              t0,  4[sp]
+    sw              t1,  8[sp]
+    sw              t2, 12[sp]
+    sw              s0, 16[sp]
+    sw              s1, 20[sp]
 
 
-               csrr            t0, MCAUSE
-               bgez            t0, handle_exception ; MSB clear => exception/trap
+    csrr            t0, MCAUSE
+    bgez            t0, handle_exception ; MSB clear => exception/trap
 
 
-               ; Interrupt path: use low bits as cause code
-               andi            t0, t0, 0xF
-               li              t1, MCAUSE_M_EXT
-               beq             t0, t1, interrupt_handler_11
-               j               interrupt_exit       ; ignore unknown interrupts
+    ; Interrupt path: use low bits as cause code
+    andi            t0, t0, 0xF
+    li              t1, MCAUSE_M_EXT
+    beq             t0, t1, interrupt_handler_11
+    j               interrupt_exit       ; ignore unknown interrupts
 
 
 
@@ -203,31 +203,31 @@ mhandler
 
 
 handle_exception
-               andi            t0, t0, 0xF
-               la              t1, trap_table
-               slli            t0, t0, 2
-               add             t1, t0, t1
-               lw              t1, [t1]
-               jr              t1
+    andi            t0, t0, 0xF
+    la              t1, trap_table
+    slli            t0, t0, 2
+    add             t1, t0, t1
+    lw              t1, [t1]
+    jr              t1
 
 
 trap_table
-               defw    trap_handler_0
-               defw    trap_handler_1
-               defw    trap_handler_2
-               defw    trap_handler_3
-               defw    trap_handler_4
-               defw    trap_handler_5
-               defw    trap_handler_6
-               defw    trap_handler_7
-               defw    trap_handler_8
-               defw    trap_handler_9
-               defw    trap_handler_10
-               defw    trap_handler_11
-               defw    trap_handler_12
-               defw    trap_handler_13
-               defw    trap_handler_14
-               defw    trap_handler_15
+    defw    trap_handler_0
+    defw    trap_handler_1
+    defw    trap_handler_2
+    defw    trap_handler_3
+    defw    trap_handler_4
+    defw    trap_handler_5
+    defw    trap_handler_6
+    defw    trap_handler_7
+    defw    trap_handler_8
+    defw    trap_handler_9
+    defw    trap_handler_10
+    defw    trap_handler_11
+    defw    trap_handler_12
+    defw    trap_handler_13
+    defw    trap_handler_14
+    defw    trap_handler_15
 
 
 
@@ -240,22 +240,22 @@ trap_table
 
 
 interrupt_table
-               defw    interrupt_handler_0
-               defw    interrupt_handler_1
-               defw    interrupt_handler_2
-               defw    interrupt_handler_3
-               defw    interrupt_handler_4
-               defw    interrupt_handler_5
-               defw    interrupt_handler_6
-               defw    interrupt_handler_7
-               defw    interrupt_handler_8
-               defw    interrupt_handler_9
-               defw    interrupt_handler_10
-               defw    interrupt_handler_11
-               defw    interrupt_handler_12
-               defw    interrupt_handler_13
-               defw    interrupt_handler_14
-               defw    interrupt_handler_15
+    defw    interrupt_handler_0
+    defw    interrupt_handler_1
+    defw    interrupt_handler_2
+    defw    interrupt_handler_3
+    defw    interrupt_handler_4
+    defw    interrupt_handler_5
+    defw    interrupt_handler_6
+    defw    interrupt_handler_7
+    defw    interrupt_handler_8
+    defw    interrupt_handler_9
+    defw    interrupt_handler_10
+    defw    interrupt_handler_11
+    defw    interrupt_handler_12
+    defw    interrupt_handler_13
+    defw    interrupt_handler_14
+    defw    interrupt_handler_15
 
 
 
@@ -276,13 +276,13 @@ trap_handler_7      j       .
 
 
 trap_handler_8                              ; ECALL from user mode
-               li              t0, ECALL_MAX
-               bgeu            a7, t0, ecall_range
-               la              t0, ecall_jump
-               slli            t1, a7, 2
-               add             t0, t0, t1
-               lw              t0, [t0]
-               jr              t0
+    li              t0, ECALL_MAX
+    bgeu            a7, t0, ecall_range
+    la              t0, ecall_jump
+    slli            t1, a7, 2
+    add             t0, t0, t1
+    lw              t0, [t0]
+    jr              t0
 
 
 trap_handler_9      j       .
@@ -316,29 +316,29 @@ interrupt_handler_10    j       interrupt_exit
 
 
 interrupt_handler_11                        ; Machine external interrupt
-               ; Read the local interrupt controller to see which source fired.
-               li              t0, INT_CTRL
-               lw              t1, INT_REQUESTS[t0]
+    ; Read the local interrupt controller to see which source fired.
+    li              t0, INT_CTRL
+    lw              t1, INT_REQUESTS[t0]
 
 
-               ; Timer local interrupt bit 4?
-               andi            t2, t1, TIMER_INT_BIT
-               beqz            t2, interrupt_exit
+    ; Timer local interrupt bit 4?
+    andi            t2, t1, TIMER_INT_BIT
+    beqz            t2, interrupt_exit
 
 
-               ; Acknowledge timer source by clearing terminal-count status.
-               li              t0, TIME_PERIPH
-               li              t2, BIT31
-               sw              t2, TIME_REG_CMD[t0]
+    ; Acknowledge timer source by clearing terminal-count status.
+    li              t0, TIME_PERIPH
+    li              t2, BIT31
+    sw              t2, TIME_REG_CMD[t0]
 
 
-               ; Tell user-mode foreground code that one second elapsed.
-               la              t0, tick_flag
-               li              t1, 1
-               sw              t1, [t0]
+    ; Tell user-mode foreground code that one second elapsed.
+    la              t0, tick_flag
+    li              t1, 1
+    sw              t1, [t0]
 
 
-               j               interrupt_exit
+    j               interrupt_exit
 
 
 interrupt_handler_12    j       interrupt_exit
@@ -355,16 +355,16 @@ interrupt_handler_15    j       interrupt_exit
 
 
 ecall_jump
-               defw    ecall_0
-               defw    ecall_1
-               defw    ecall_2
-               defw    ecall_3
-               defw    ecall_4
-               defw    ecall_5
-               defw    ecall_6
-               defw    ecall_7
-               defw    ecall_8
-               defw    ecall_9
+    defw    ecall_0
+    defw    ecall_1
+    defw    ecall_2
+    defw    ecall_3
+    defw    ecall_4
+    defw    ecall_5
+    defw    ecall_6
+    defw    ecall_7
+    defw    ecall_8
+    defw    ecall_9
 
 
 
@@ -378,71 +378,71 @@ ecall_range     j       .
 
 
 ecall_0
-               li              a0, CLEAR_DIS
-               li              a1, LIGHT
-               call            lcdSendCommand
-               j               ecall_exit
+    li              a0, CLEAR_DIS
+    li              a1, LIGHT
+    call            lcdSendCommand
+    j               ecall_exit
 
 
 ecall_1
-               call            lcdSendCommand
-               j               ecall_exit
+    call            lcdSendCommand
+    j               ecall_exit
 
 
 ecall_2
-               call            printString
-               j               ecall_exit
+    call            printString
+    j               ecall_exit
 
 
 ecall_3
-               li              a0, SHIFT_NEXT
-               li              a1, LIGHT
-               call            lcdSendCommand
-               j               ecall_exit
+    li              a0, SHIFT_NEXT
+    li              a1, LIGHT
+    call            lcdSendCommand
+    j               ecall_exit
 
 
 ecall_4                                      ; Optional software re-initialise timer
-               li              t0, MODULUS
-               li              t1, TIME_PERIPH
-               sw              t0, TIME_REG_LIMIT[t1]
-               li              t0, 0b1011
-               sw              t0, TIME_REG_CTRL[t1]
-               li              t0, BIT31
-               sw              t0, TIME_REG_CMD[t1]
-               j               ecall_exit
+    li              t0, MODULUS
+    li              t1, TIME_PERIPH
+    sw              t0, TIME_REG_LIMIT[t1]
+    li              t0, 0b1011
+    sw              t0, TIME_REG_CTRL[t1]
+    li              t0, BIT31
+    sw              t0, TIME_REG_CMD[t1]
+    j               ecall_exit
 
 
 ecall_5
-               li              t0, BUTTONS
-               lb              a0, [t0]
-               j               ecall_exit
+    li              t0, BUTTONS
+    lb              a0, [t0]
+    j               ecall_exit
 
 
 ecall_6
-               li              t0, TIME_PERIPH
-               lw              a0, TIME_REG_STATUS[t0]
-               j               ecall_exit
+    li              t0, TIME_PERIPH
+    lw              a0, TIME_REG_STATUS[t0]
+    j               ecall_exit
 
 
 ecall_7
-               li              t0, BIT31
-               li              t1, TIME_PERIPH
-               sw              t0, TIME_REG_CMD[t1]
-               j               ecall_exit
+    li              t0, BIT31
+    li              t1, TIME_PERIPH
+    sw              t0, TIME_REG_CMD[t1]
+    j               ecall_exit
 
 
 ecall_8                                      ; Pause timer
-               li              t0, BIT0
-               li              t1, TIME_PERIPH
-               sw              t0, TIME_REG_CMD[t1]
-               j               ecall_exit
+    li              t0, BIT0
+    li              t1, TIME_PERIPH
+    sw              t0, TIME_REG_CMD[t1]
+    j               ecall_exit
 
 
 ecall_9                                      ; Resume timer
-               li              t0, 0b1011
-               li              t1, TIME_PERIPH
-               sw              t0, TIME_REG_CTRL[t1]
-               j               ecall_exit
+    li              t0, 0b1011
+    li              t1, TIME_PERIPH
+    sw              t0, TIME_REG_CTRL[t1]
+    j               ecall_exit
 
 
 ecall_end
@@ -456,27 +456,27 @@ ecall_end
 
 
 ecall_exit
-               csrr            t0, MEPC
-               addi            t0, t0, 4          ; skip the ECALL instruction
-               csrw            MEPC, t0
-               j               trap_restore
+    csrr            t0, MEPC
+    addi            t0, t0, 4          ; skip the ECALL instruction
+    csrw            MEPC, t0
+    j               trap_restore
 
 
 interrupt_exit
-               ; Do NOT increment MEPC for interrupts.
-               j               trap_restore
+    ; Do NOT increment MEPC for interrupts.
+    j               trap_restore
 
 
 trap_restore
-               lw              ra,  0[sp]
-               lw              t0,  4[sp]
-               lw              t1,  8[sp]
-               lw              t2, 12[sp]
-               lw              s0, 16[sp]
-               lw              s1, 20[sp]
-               addi            sp, sp, 24
-               csrrw           sp, MSCRATCH, sp
-               mret
+    lw              ra,  0[sp]
+    lw              t0,  4[sp]
+    lw              t1,  8[sp]
+    lw              t2, 12[sp]
+    lw              s0, 16[sp]
+    lw              s1, 20[sp]
+    addi            sp, sp, 24
+    csrrw           sp, MSCRATCH, sp
+    mret
 
 
 
@@ -553,105 +553,105 @@ user_stack_base align
 
 
 START
-               call            displayStartScreen
+    call            displayStartScreen
 
 
 waitForStart
-               li              a7, 5
-               ecall
-               andi            a0, a0, BTTN1
-               beqz            a0, waitForStart
+    li              a7, 5
+    ecall
+    andi            a0, a0, BTTN1
+    beqz            a0, waitForStart
 
 
-               li              s0, 0
-               li              s1, 0
-               li              s2, 0
+    li              s0, 0
+    li              s1, 0
+    li              s2, 0
 
 
-               la              t0, tick_flag
-               sw              zero, [t0]
+    la              t0, tick_flag
+    sw              zero, [t0]
 
 
-               li              a7, 4              ; ensure timer starts cleanly
-               ecall
+    li              a7, 4              ; ensure timer starts cleanly
+    ecall
 
 
-               call            displayTime
-               j               running
+    call            displayTime
+    j               running
 
 
 running
-               ; Still poll buttons in user mode for pause.
-               li              a7, 5
-               ecall
-               andi            t0, a0, BTTN2
-               bnez            t0, paused
+    ; Still poll buttons in user mode for pause.
+    li              a7, 5
+    ecall
+    andi            t0, a0, BTTN2
+    bnez            t0, paused
 
 
-               ; Consume one-second tick set by timer interrupt handler.
-               la              t0, tick_flag
-               lw              t1, [t0]
-               beqz            t1, running
+    ; Consume one-second tick set by timer interrupt handler.
+    la              t0, tick_flag
+    lw              t1, [t0]
+    beqz            t1, running
 
 
-               sw              zero, [t0]
+    sw              zero, [t0]
 
 
-               addi            s0, s0, 1
-               li              t2, 60
-               blt             s0, t2, showTime
+    addi            s0, s0, 1
+    li              t2, 60
+    blt             s0, t2, showTime
 
 
-               li              s0, 0
-               addi            s1, s1, 1
-               blt             s1, t2, showTime
+    li              s0, 0
+    addi            s1, s1, 1
+    blt             s1, t2, showTime
 
 
-               li              s1, 0
-               addi            s2, s2, 1
+    li              s1, 0
+    addi            s2, s2, 1
 
 
 showTime
-               call            displayTime
-               j               running
+    call            displayTime
+    j               running
 
 
 paused
-               li              a7, 8
-               ecall
-               call            displayPauseScreen
+    li              a7, 8
+    ecall
+    call            displayPauseScreen
 
 
 pauseLoop
-               li              a7, 5
-               ecall
+    li              a7, 5
+    ecall
 
 
-               andi            t0, a0, BTTN1
-               bnez            t0, resumeTimer
+    andi            t0, a0, BTTN1
+    bnez            t0, resumeTimer
 
 
-               andi            t0, a0, BTTN3
-               bnez            t0, resetTimer
+    andi            t0, a0, BTTN3
+    bnez            t0, resetTimer
 
 
-               j               pauseLoop
+    j               pauseLoop
 
 
 resumeTimer
-               li              a7, 9
-               ecall
-               call            displayTime
-               j               running
+    li              a7, 9
+    ecall
+    call            displayTime
+    j               running
 
 
 resetTimer
-               li              s0, 0
-               li              s1, 0
-               li              s2, 0
-               la              t0, tick_flag
-               sw              zero, [t0]
-               j               START
+    li              s0, 0
+    li              s1, 0
+    li              s2, 0
+    la              t0, tick_flag
+    sw              zero, [t0]
+    j               START
 
 
 END             j       .

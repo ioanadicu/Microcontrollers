@@ -32,11 +32,11 @@ KMD
 00000000:             ; ; =============================================================================
 00000000:             ; 
 00000000:             ; 
-00000000:             ;                ORG             0x0000_0000
-00000000: 0CC0006F    ;                j               initialisation
+00000000:             ;         ORG             0x0000_0000
+00000000: 0CC0006F    ;         j               initialisation
 00000004:             ; 
 00000004:             ; 
-00000004:             ;                INCLUDE         DisplayOperations.s
+00000004:             ;         INCLUDE         DisplayOperations.s
 00000004:             ; ; =============================================================================
 00000004:             ; ; Display Operations Library
 00000004:             ; ; Maria-Ioana Dicu
@@ -289,79 +289,79 @@ KMD
 000000CC:             ; 
 000000CC:             ; 
 000000CC:             ; initialisation
-000000CC: 000022B7    ;                li              t0, MPP_MASK
+000000CC: 000022B7    ;     li              t0, MPP_MASK
 000000D0: 80028293    ; 
-000000D4: 3002B073    ;                csrc            MSTATUS, t0          ; drop return privilege to U mode
+000000D4: 3002B073    ;     csrc            MSTATUS, t0          ; drop return privilege to U mode
 000000D8:             ; 
 000000D8:             ; 
-000000D8: 00000297    ;                la              t0, mhandler
+000000D8: 00000297    ;     la              t0, mhandler
 000000DC: 08028293    ; 
-000000E0: 30529073    ;                csrw            MTVEC, t0
+000000E0: 30529073    ;     csrw            MTVEC, t0
 000000E4:             ; 
 000000E4:             ; 
-000000E4: 00000297    ;                la              t0, mstack_base
+000000E4: 00000297    ;     la              t0, mstack_base
 000000E8: 39428293    ; 
-000000EC: 34029073    ;                csrw            MSCRATCH, t0
+000000EC: 34029073    ;     csrw            MSCRATCH, t0
 000000F0:             ; 
 000000F0:             ; 
-000000F0:             ;                ; -------------------------------------------------------------
-000000F0:             ;                ; Timer configuration: 1 second periodic interrupt
-000000F0:             ;                ; bit0 = enable
-000000F0:             ;                ; bit1 = modulus/reload mode
-000000F0:             ;                ; bit3 = interrupt output enable
-000000F0:             ;                ; -------------------------------------------------------------
-000000F0: 00010337    ;                li              t1, TIME_PERIPH
+000000F0:             ;     ; -------------------------------------------------------------
+000000F0:             ;     ; Timer configuration: 1 second periodic interrupt
+000000F0:             ;     ; bit0 = enable
+000000F0:             ;     ; bit1 = modulus/reload mode
+000000F0:             ;     ; bit3 = interrupt output enable
+000000F0:             ;     ; -------------------------------------------------------------
+000000F0: 00010337    ;     li              t1, TIME_PERIPH
 000000F4: 20030313    ; 
-000000F8: 000F42B7    ;                li              t0, MODULUS
+000000F8: 000F42B7    ;     li              t0, MODULUS
 000000FC: 23F28293    ; 
-00000100: 00532223    ;                sw              t0, TIME_REG_LIMIT[t1]
+00000100: 00532223    ;     sw              t0, TIME_REG_LIMIT[t1]
 00000104:             ; 
 00000104:             ; 
-00000104: 00B00293    ;                li              t0, 0b1011
-00000108: 00532A23    ;                sw              t0, TIME_REG_CTRL[t1]
+00000104: 00B00293    ;     li              t0, 0b1011
+00000108: 00532A23    ;     sw              t0, TIME_REG_CTRL[t1]
 0000010C:             ; 
 0000010C:             ; 
-0000010C:             ;                ; Clear any stale terminal-count status before enabling IRQ flow
-0000010C: 800002B7    ;                li              t0, BIT31
-00000110: 00532823    ;                sw              t0, TIME_REG_CMD[t1]
+0000010C:             ;     ; Clear any stale terminal-count status before enabling IRQ flow
+0000010C: 800002B7    ;     li              t0, BIT31
+00000110: 00532823    ;     sw              t0, TIME_REG_CMD[t1]
 00000114:             ; 
 00000114:             ; 
-00000114:             ;                ; -------------------------------------------------------------
-00000114:             ;                ; Interrupt controller setup
-00000114:             ;                ; local bit 4 = timer
-00000114:             ;                ; leave mode register at 0 => level-sensitive inputs
-00000114:             ;                ; -------------------------------------------------------------
-00000114: 00010337    ;                li              t1, INT_CTRL
+00000114:             ;     ; -------------------------------------------------------------
+00000114:             ;     ; Interrupt controller setup
+00000114:             ;     ; local bit 4 = timer
+00000114:             ;     ; leave mode register at 0 => level-sensitive inputs
+00000114:             ;     ; -------------------------------------------------------------
+00000114: 00010337    ;     li              t1, INT_CTRL
 00000118: 40030313    ; 
-0000011C: 00000293    ;                li              t0, 0
-00000120: 00532623    ;                sw              t0, INT_MODE[t1]
+0000011C: 00000293    ;     li              t0, 0
+00000120: 00532623    ;     sw              t0, INT_MODE[t1]
 00000124:             ; 
 00000124:             ; 
-00000124: 01000293    ;                li              t0, TIMER_INT_BIT
-00000128: 00532223    ;                sw              t0, INT_ENABLES[t1]
+00000124: 01000293    ;     li              t0, TIMER_INT_BIT
+00000128: 00532223    ;     sw              t0, INT_ENABLES[t1]
 0000012C:             ; 
 0000012C:             ; 
-0000012C:             ;                ; -------------------------------------------------------------
-0000012C:             ;                ; Enable machine external interrupts
-0000012C:             ;                ; -------------------------------------------------------------
-0000012C: 000012B7    ;                li              t0, MIE_MEIE
+0000012C:             ;     ; -------------------------------------------------------------
+0000012C:             ;     ; Enable machine external interrupts
+0000012C:             ;     ; -------------------------------------------------------------
+0000012C: 000012B7    ;     li              t0, MIE_MEIE
 00000130: 80028293    ; 
-00000134: 3042A073    ;                csrs            MIE, t0
+00000134: 3042A073    ;     csrs            MIE, t0
 00000138:             ; 
 00000138:             ; 
-00000138: 00800293    ;                li              t0, MSTATUS_MIE
-0000013C: 3002A073    ;                csrs            MSTATUS, t0
+00000138: 00800293    ;     li              t0, MSTATUS_MIE
+0000013C: 3002A073    ;     csrs            MSTATUS, t0
 00000140:             ; 
 00000140:             ; 
-00000140:             ;                ; -------------------------------------------------------------
-00000140:             ;                ; Enter user mode
-00000140:             ;                ; -------------------------------------------------------------
-00000140: 00040117    ;                la              sp, user_stack_base
+00000140:             ;     ; -------------------------------------------------------------
+00000140:             ;     ; Enter user mode
+00000140:             ;     ; -------------------------------------------------------------
+00000140: 00040117    ;     la              sp, user_stack_base
 00000144: F9810113    ; 
-00000148: 00040297    ;                la              t0, user_code
+00000148: 00040297    ;     la              t0, user_code
 0000014C: EB828293    ; 
-00000150: 34129073    ;                csrw            MEPC, t0
-00000154: 30200073    ;                mret
+00000150: 34129073    ;     csrw            MEPC, t0
+00000154: 30200073    ;     mret
 00000158:             ; 
 00000158:             ; 
 00000158:             ; 
@@ -372,25 +372,25 @@ KMD
 00000158:             ; 
 00000158:             ; 
 00000158:             ; mhandler
-00000158: 34011173    ;                csrrw           sp, MSCRATCH, sp     ; swap user SP for machine SP
-0000015C: FE810113    ;                subi            sp, sp, 24
-00000160: 00112023    ;                sw              ra,  0[sp]
-00000164: 00512223    ;                sw              t0,  4[sp]
-00000168: 00612423    ;                sw              t1,  8[sp]
-0000016C: 00712623    ;                sw              t2, 12[sp]
-00000170: 00812823    ;                sw              s0, 16[sp]
-00000174: 00912A23    ;                sw              s1, 20[sp]
+00000158: 34011173    ;     csrrw           sp, MSCRATCH, sp     ; swap user SP for machine SP
+0000015C: FE810113    ;     subi            sp, sp, 24
+00000160: 00112023    ;     sw              ra,  0[sp]
+00000164: 00512223    ;     sw              t0,  4[sp]
+00000168: 00612423    ;     sw              t1,  8[sp]
+0000016C: 00712623    ;     sw              t2, 12[sp]
+00000170: 00812823    ;     sw              s0, 16[sp]
+00000174: 00912A23    ;     sw              s1, 20[sp]
 00000178:             ; 
 00000178:             ; 
-00000178: 342022F3    ;                csrr            t0, MCAUSE
-0000017C: 0002DA63    ;                bgez            t0, handle_exception ; MSB clear => exception/trap
+00000178: 342022F3    ;     csrr            t0, MCAUSE
+0000017C: 0002DA63    ;     bgez            t0, handle_exception ; MSB clear => exception/trap
 00000180:             ; 
 00000180:             ; 
-00000180:             ;                ; Interrupt path: use low bits as cause code
-00000180: 00F2F293    ;                andi            t0, t0, 0xF
-00000184: 00B00313    ;                li              t1, MCAUSE_M_EXT
-00000188: 12628663    ;                beq             t0, t1, interrupt_handler_11
-0000018C: 2600006F    ;                j               interrupt_exit       ; ignore unknown interrupts
+00000180:             ;     ; Interrupt path: use low bits as cause code
+00000180: 00F2F293    ;     andi            t0, t0, 0xF
+00000184: 00B00313    ;     li              t1, MCAUSE_M_EXT
+00000188: 12628663    ;     beq             t0, t1, interrupt_handler_11
+0000018C: 2600006F    ;     j               interrupt_exit       ; ignore unknown interrupts
 00000190:             ; 
 00000190:             ; 
 00000190:             ; 
@@ -401,32 +401,32 @@ KMD
 00000190:             ; 
 00000190:             ; 
 00000190:             ; handle_exception
-00000190: 00F2F293    ;                andi            t0, t0, 0xF
-00000194: 00000317    ;                la              t1, trap_table
+00000190: 00F2F293    ;     andi            t0, t0, 0xF
+00000194: 00000317    ;     la              t1, trap_table
 00000198: 01830313    ; 
-0000019C: 00229293    ;                slli            t0, t0, 2
-000001A0: 00628333    ;                add             t1, t0, t1
-000001A4: 00032303    ;                lw              t1, [t1]
-000001A8: 00030067    ;                jr              t1
+0000019C: 00229293    ;     slli            t0, t0, 2
+000001A0: 00628333    ;     add             t1, t0, t1
+000001A4: 00032303    ;     lw              t1, [t1]
+000001A8: 00030067    ;     jr              t1
 000001AC:             ; 
 000001AC:             ; 
 000001AC:             ; trap_table
-000001AC: 0000022C    ;                defw    trap_handler_0
-000001B0: 00000230    ;                defw    trap_handler_1
-000001B4: 00000234    ;                defw    trap_handler_2
-000001B8: 00000238    ;                defw    trap_handler_3
-000001BC: 0000023C    ;                defw    trap_handler_4
-000001C0: 00000240    ;                defw    trap_handler_5
-000001C4: 00000244    ;                defw    trap_handler_6
-000001C8: 00000248    ;                defw    trap_handler_7
-000001CC: 0000024C    ;                defw    trap_handler_8
-000001D0: 0000026C    ;                defw    trap_handler_9
-000001D4: 00000270    ;                defw    trap_handler_10
-000001D8: 00000274    ;                defw    trap_handler_11
-000001DC: 00000278    ;                defw    trap_handler_12
-000001E0: 0000027C    ;                defw    trap_handler_13
-000001E4: 00000280    ;                defw    trap_handler_14
-000001E8: 00000284    ;                defw    trap_handler_15
+000001AC: 0000022C    ;     defw    trap_handler_0
+000001B0: 00000230    ;     defw    trap_handler_1
+000001B4: 00000234    ;     defw    trap_handler_2
+000001B8: 00000238    ;     defw    trap_handler_3
+000001BC: 0000023C    ;     defw    trap_handler_4
+000001C0: 00000240    ;     defw    trap_handler_5
+000001C4: 00000244    ;     defw    trap_handler_6
+000001C8: 00000248    ;     defw    trap_handler_7
+000001CC: 0000024C    ;     defw    trap_handler_8
+000001D0: 0000026C    ;     defw    trap_handler_9
+000001D4: 00000270    ;     defw    trap_handler_10
+000001D8: 00000274    ;     defw    trap_handler_11
+000001DC: 00000278    ;     defw    trap_handler_12
+000001E0: 0000027C    ;     defw    trap_handler_13
+000001E4: 00000280    ;     defw    trap_handler_14
+000001E8: 00000284    ;     defw    trap_handler_15
 000001EC:             ; 
 000001EC:             ; 
 000001EC:             ; 
@@ -439,22 +439,22 @@ KMD
 000001EC:             ; 
 000001EC:             ; 
 000001EC:             ; interrupt_table
-000001EC: 00000288    ;                defw    interrupt_handler_0
-000001F0: 0000028C    ;                defw    interrupt_handler_1
-000001F4: 00000290    ;                defw    interrupt_handler_2
-000001F8: 00000294    ;                defw    interrupt_handler_3
-000001FC: 00000298    ;                defw    interrupt_handler_4
-00000200: 0000029C    ;                defw    interrupt_handler_5
-00000204: 000002A0    ;                defw    interrupt_handler_6
-00000208: 000002A4    ;                defw    interrupt_handler_7
-0000020C: 000002A8    ;                defw    interrupt_handler_8
-00000210: 000002AC    ;                defw    interrupt_handler_9
-00000214: 000002B0    ;                defw    interrupt_handler_10
-00000218: 000002B4    ;                defw    interrupt_handler_11
-0000021C: 000002EC    ;                defw    interrupt_handler_12
-00000220: 000002F0    ;                defw    interrupt_handler_13
-00000224: 000002F4    ;                defw    interrupt_handler_14
-00000228: 000002F8    ;                defw    interrupt_handler_15
+000001EC: 00000288    ;     defw    interrupt_handler_0
+000001F0: 0000028C    ;     defw    interrupt_handler_1
+000001F4: 00000290    ;     defw    interrupt_handler_2
+000001F8: 00000294    ;     defw    interrupt_handler_3
+000001FC: 00000298    ;     defw    interrupt_handler_4
+00000200: 0000029C    ;     defw    interrupt_handler_5
+00000204: 000002A0    ;     defw    interrupt_handler_6
+00000208: 000002A4    ;     defw    interrupt_handler_7
+0000020C: 000002A8    ;     defw    interrupt_handler_8
+00000210: 000002AC    ;     defw    interrupt_handler_9
+00000214: 000002B0    ;     defw    interrupt_handler_10
+00000218: 000002B4    ;     defw    interrupt_handler_11
+0000021C: 000002EC    ;     defw    interrupt_handler_12
+00000220: 000002F0    ;     defw    interrupt_handler_13
+00000224: 000002F4    ;     defw    interrupt_handler_14
+00000228: 000002F8    ;     defw    interrupt_handler_15
 0000022C:             ; 
 0000022C:             ; 
 0000022C:             ; 
@@ -475,14 +475,14 @@ KMD
 0000024C:             ; 
 0000024C:             ; 
 0000024C:             ; trap_handler_8                              ; ECALL from user mode
-0000024C: 02D00293    ;                li              t0, ECALL_MAX
-00000250: 0C58FA63    ;                bgeu            a7, t0, ecall_range
-00000254: 00000297    ;                la              t0, ecall_jump
+0000024C: 02D00293    ;     li              t0, ECALL_MAX
+00000250: 0C58FA63    ;     bgeu            a7, t0, ecall_range
+00000254: 00000297    ;     la              t0, ecall_jump
 00000258: 0A828293    ; 
-0000025C: 00289313    ;                slli            t1, a7, 2
-00000260: 006282B3    ;                add             t0, t0, t1
-00000264: 0002A283    ;                lw              t0, [t0]
-00000268: 00028067    ;                jr              t0
+0000025C: 00289313    ;     slli            t1, a7, 2
+00000260: 006282B3    ;     add             t0, t0, t1
+00000264: 0002A283    ;     lw              t0, [t0]
+00000268: 00028067    ;     jr              t0
 0000026C:             ; 
 0000026C:             ; 
 0000026C: 0000006F    ; trap_handler_9      j       .
@@ -516,32 +516,32 @@ KMD
 000002B4:             ; 
 000002B4:             ; 
 000002B4:             ; interrupt_handler_11                        ; Machine external interrupt
-000002B4:             ;                ; Read the local interrupt controller to see which source fired.
-000002B4: 000102B7    ;                li              t0, INT_CTRL
+000002B4:             ;     ; Read the local interrupt controller to see which source fired.
+000002B4: 000102B7    ;     li              t0, INT_CTRL
 000002B8: 40028293    ; 
-000002BC: 0082A303    ;                lw              t1, INT_REQUESTS[t0]
+000002BC: 0082A303    ;     lw              t1, INT_REQUESTS[t0]
 000002C0:             ; 
 000002C0:             ; 
-000002C0:             ;                ; Timer local interrupt bit 4?
-000002C0: 01037393    ;                andi            t2, t1, TIMER_INT_BIT
-000002C4: 12038463    ;                beqz            t2, interrupt_exit
+000002C0:             ;     ; Timer local interrupt bit 4?
+000002C0: 01037393    ;     andi            t2, t1, TIMER_INT_BIT
+000002C4: 12038463    ;     beqz            t2, interrupt_exit
 000002C8:             ; 
 000002C8:             ; 
-000002C8:             ;                ; Acknowledge timer source by clearing terminal-count status.
-000002C8: 000102B7    ;                li              t0, TIME_PERIPH
+000002C8:             ;     ; Acknowledge timer source by clearing terminal-count status.
+000002C8: 000102B7    ;     li              t0, TIME_PERIPH
 000002CC: 20028293    ; 
-000002D0: 800003B7    ;                li              t2, BIT31
-000002D4: 0072A823    ;                sw              t2, TIME_REG_CMD[t0]
+000002D0: 800003B7    ;     li              t2, BIT31
+000002D4: 0072A823    ;     sw              t2, TIME_REG_CMD[t0]
 000002D8:             ; 
 000002D8:             ; 
-000002D8:             ;                ; Tell user-mode foreground code that one second elapsed.
-000002D8: 00040297    ;                la              t0, tick_flag
+000002D8:             ;     ; Tell user-mode foreground code that one second elapsed.
+000002D8: 00040297    ;     la              t0, tick_flag
 000002DC: D9828293    ; 
-000002E0: 00100313    ;                li              t1, 1
-000002E4: 0062A023    ;                sw              t1, [t0]
+000002E0: 00100313    ;     li              t1, 1
+000002E4: 0062A023    ;     sw              t1, [t0]
 000002E8:             ; 
 000002E8:             ; 
-000002E8: 1040006F    ;                j               interrupt_exit
+000002E8: 1040006F    ;     j               interrupt_exit
 000002EC:             ; 
 000002EC:             ; 
 000002EC: 1000006F    ; interrupt_handler_12    j       interrupt_exit
@@ -558,16 +558,16 @@ KMD
 000002FC:             ; 
 000002FC:             ; 
 000002FC:             ; ecall_jump
-000002FC: 00000328    ;                defw    ecall_0
-00000300: 00000338    ;                defw    ecall_1
-00000304: 00000340    ;                defw    ecall_2
-00000308: 00000348    ;                defw    ecall_3
-0000030C: 00000358    ;                defw    ecall_4
-00000310: 00000380    ;                defw    ecall_5
-00000314: 00000390    ;                defw    ecall_6
-00000318: 000003A0    ;                defw    ecall_7
-0000031C: 000003B4    ;                defw    ecall_8
-00000320: 000003C8    ;                defw    ecall_9
+000002FC: 00000328    ;     defw    ecall_0
+00000300: 00000338    ;     defw    ecall_1
+00000304: 00000340    ;     defw    ecall_2
+00000308: 00000348    ;     defw    ecall_3
+0000030C: 00000358    ;     defw    ecall_4
+00000310: 00000380    ;     defw    ecall_5
+00000314: 00000390    ;     defw    ecall_6
+00000318: 000003A0    ;     defw    ecall_7
+0000031C: 000003B4    ;     defw    ecall_8
+00000320: 000003C8    ;     defw    ecall_9
 00000324:             ; 
 00000324:             ; 
 00000324:             ; 
@@ -581,78 +581,78 @@ KMD
 00000328:             ; 
 00000328:             ; 
 00000328:             ; ecall_0
-00000328: 00100513    ;                li              a0, CLEAR_DIS
-0000032C: 00800593    ;                li              a1, LIGHT
-00000330: D1DFF0EF    ;                call            lcdSendCommand
-00000334: 0A80006F    ;                j               ecall_exit
+00000328: 00100513    ;     li              a0, CLEAR_DIS
+0000032C: 00800593    ;     li              a1, LIGHT
+00000330: D1DFF0EF    ;     call            lcdSendCommand
+00000334: 0A80006F    ;     j               ecall_exit
 00000338:             ; 
 00000338:             ; 
 00000338:             ; ecall_1
-00000338: D15FF0EF    ;                call            lcdSendCommand
-0000033C: 0A00006F    ;                j               ecall_exit
+00000338: D15FF0EF    ;     call            lcdSendCommand
+0000033C: 0A00006F    ;     j               ecall_exit
 00000340:             ; 
 00000340:             ; 
 00000340:             ; ecall_2
-00000340: CC5FF0EF    ;                call            printString
-00000344: 0980006F    ;                j               ecall_exit
+00000340: CC5FF0EF    ;     call            printString
+00000344: 0980006F    ;     j               ecall_exit
 00000348:             ; 
 00000348:             ; 
 00000348:             ; ecall_3
-00000348: 0C000513    ;                li              a0, SHIFT_NEXT
-0000034C: 00800593    ;                li              a1, LIGHT
-00000350: CFDFF0EF    ;                call            lcdSendCommand
-00000354: 0880006F    ;                j               ecall_exit
+00000348: 0C000513    ;     li              a0, SHIFT_NEXT
+0000034C: 00800593    ;     li              a1, LIGHT
+00000350: CFDFF0EF    ;     call            lcdSendCommand
+00000354: 0880006F    ;     j               ecall_exit
 00000358:             ; 
 00000358:             ; 
 00000358:             ; ecall_4                                      ; Optional software re-initialise timer
-00000358: 000F42B7    ;                li              t0, MODULUS
+00000358: 000F42B7    ;     li              t0, MODULUS
 0000035C: 23F28293    ; 
-00000360: 00010337    ;                li              t1, TIME_PERIPH
+00000360: 00010337    ;     li              t1, TIME_PERIPH
 00000364: 20030313    ; 
-00000368: 00532223    ;                sw              t0, TIME_REG_LIMIT[t1]
-0000036C: 00B00293    ;                li              t0, 0b1011
-00000370: 00532A23    ;                sw              t0, TIME_REG_CTRL[t1]
-00000374: 800002B7    ;                li              t0, BIT31
-00000378: 00532823    ;                sw              t0, TIME_REG_CMD[t1]
-0000037C: 0600006F    ;                j               ecall_exit
+00000368: 00532223    ;     sw              t0, TIME_REG_LIMIT[t1]
+0000036C: 00B00293    ;     li              t0, 0b1011
+00000370: 00532A23    ;     sw              t0, TIME_REG_CTRL[t1]
+00000374: 800002B7    ;     li              t0, BIT31
+00000378: 00532823    ;     sw              t0, TIME_REG_CMD[t1]
+0000037C: 0600006F    ;     j               ecall_exit
 00000380:             ; 
 00000380:             ; 
 00000380:             ; ecall_5
-00000380: 000102B7    ;                li              t0, BUTTONS
+00000380: 000102B7    ;     li              t0, BUTTONS
 00000384: 00128293    ; 
-00000388: 00028503    ;                lb              a0, [t0]
-0000038C: 0500006F    ;                j               ecall_exit
+00000388: 00028503    ;     lb              a0, [t0]
+0000038C: 0500006F    ;     j               ecall_exit
 00000390:             ; 
 00000390:             ; 
 00000390:             ; ecall_6
-00000390: 000102B7    ;                li              t0, TIME_PERIPH
+00000390: 000102B7    ;     li              t0, TIME_PERIPH
 00000394: 20028293    ; 
-00000398: 00C2A503    ;                lw              a0, TIME_REG_STATUS[t0]
-0000039C: 0400006F    ;                j               ecall_exit
+00000398: 00C2A503    ;     lw              a0, TIME_REG_STATUS[t0]
+0000039C: 0400006F    ;     j               ecall_exit
 000003A0:             ; 
 000003A0:             ; 
 000003A0:             ; ecall_7
-000003A0: 800002B7    ;                li              t0, BIT31
-000003A4: 00010337    ;                li              t1, TIME_PERIPH
+000003A0: 800002B7    ;     li              t0, BIT31
+000003A4: 00010337    ;     li              t1, TIME_PERIPH
 000003A8: 20030313    ; 
-000003AC: 00532823    ;                sw              t0, TIME_REG_CMD[t1]
-000003B0: 02C0006F    ;                j               ecall_exit
+000003AC: 00532823    ;     sw              t0, TIME_REG_CMD[t1]
+000003B0: 02C0006F    ;     j               ecall_exit
 000003B4:             ; 
 000003B4:             ; 
 000003B4:             ; ecall_8                                      ; Pause timer
-000003B4: 00100293    ;                li              t0, BIT0
-000003B8: 00010337    ;                li              t1, TIME_PERIPH
+000003B4: 00100293    ;     li              t0, BIT0
+000003B8: 00010337    ;     li              t1, TIME_PERIPH
 000003BC: 20030313    ; 
-000003C0: 00532823    ;                sw              t0, TIME_REG_CMD[t1]
-000003C4: 0180006F    ;                j               ecall_exit
+000003C0: 00532823    ;     sw              t0, TIME_REG_CMD[t1]
+000003C4: 0180006F    ;     j               ecall_exit
 000003C8:             ; 
 000003C8:             ; 
 000003C8:             ; ecall_9                                      ; Resume timer
-000003C8: 00B00293    ;                li              t0, 0b1011
-000003CC: 00010337    ;                li              t1, TIME_PERIPH
+000003C8: 00B00293    ;     li              t0, 0b1011
+000003CC: 00010337    ;     li              t1, TIME_PERIPH
 000003D0: 20030313    ; 
-000003D4: 00532A23    ;                sw              t0, TIME_REG_CTRL[t1]
-000003D8: 0040006F    ;                j               ecall_exit
+000003D4: 00532A23    ;     sw              t0, TIME_REG_CTRL[t1]
+000003D8: 0040006F    ;     j               ecall_exit
 000003DC:             ; 
 000003DC:             ; 
 000003DC:             ; ecall_end
@@ -666,27 +666,27 @@ KMD
 000003DC:             ; 
 000003DC:             ; 
 000003DC:             ; ecall_exit
-000003DC: 341022F3    ;                csrr            t0, MEPC
-000003E0: 00428293    ;                addi            t0, t0, 4          ; skip the ECALL instruction
-000003E4: 34129073    ;                csrw            MEPC, t0
-000003E8: 0080006F    ;                j               trap_restore
+000003DC: 341022F3    ;     csrr            t0, MEPC
+000003E0: 00428293    ;     addi            t0, t0, 4          ; skip the ECALL instruction
+000003E4: 34129073    ;     csrw            MEPC, t0
+000003E8: 0080006F    ;     j               trap_restore
 000003EC:             ; 
 000003EC:             ; 
 000003EC:             ; interrupt_exit
-000003EC:             ;                ; Do NOT increment MEPC for interrupts.
-000003EC: 0040006F    ;                j               trap_restore
+000003EC:             ;     ; Do NOT increment MEPC for interrupts.
+000003EC: 0040006F    ;     j               trap_restore
 000003F0:             ; 
 000003F0:             ; 
 000003F0:             ; trap_restore
-000003F0: 00012083    ;                lw              ra,  0[sp]
-000003F4: 00412283    ;                lw              t0,  4[sp]
-000003F8: 00812303    ;                lw              t1,  8[sp]
-000003FC: 00C12383    ;                lw              t2, 12[sp]
-00000400: 01012403    ;                lw              s0, 16[sp]
-00000404: 01412483    ;                lw              s1, 20[sp]
-00000408: 01810113    ;                addi            sp, sp, 24
-0000040C: 34011173    ;                csrrw           sp, MSCRATCH, sp
-00000410: 30200073    ;                mret
+000003F0: 00012083    ;     lw              ra,  0[sp]
+000003F4: 00412283    ;     lw              t0,  4[sp]
+000003F8: 00812303    ;     lw              t1,  8[sp]
+000003FC: 00C12383    ;     lw              t2, 12[sp]
+00000400: 01012403    ;     lw              s0, 16[sp]
+00000404: 01412483    ;     lw              s1, 20[sp]
+00000408: 01810113    ;     addi            sp, sp, 24
+0000040C: 34011173    ;     csrrw           sp, MSCRATCH, sp
+00000410: 30200073    ;     mret
 00000414:             ; 
 00000414:             ; 
 00000414:             ; 
@@ -1024,108 +1024,108 @@ KMD
 0004025C:             ; 
 0004025C:             ; 
 0004025C:             ; START
-0004025C: F79FF0EF    ;                call            displayStartScreen
+0004025C: F79FF0EF    ;     call            displayStartScreen
 00040260:             ; 
 00040260:             ; 
 00040260:             ; waitForStart
-00040260: 00500893    ;                li              a7, 5
-00040264: 00000073    ;                ecall
-00040268: 00157513    ;                andi            a0, a0, BTTN1
-0004026C: FE050AE3    ;                beqz            a0, waitForStart
+00040260: 00500893    ;     li              a7, 5
+00040264: 00000073    ;     ecall
+00040268: 00157513    ;     andi            a0, a0, BTTN1
+0004026C: FE050AE3    ;     beqz            a0, waitForStart
 00040270:             ; 
 00040270:             ; 
-00040270: 00000413    ;                li              s0, 0
-00040274: 00000493    ;                li              s1, 0
-00040278: 00000913    ;                li              s2, 0
+00040270: 00000413    ;     li              s0, 0
+00040274: 00000493    ;     li              s1, 0
+00040278: 00000913    ;     li              s2, 0
 0004027C:             ; 
 0004027C:             ; 
-0004027C: 00000297    ;                la              t0, tick_flag
+0004027C: 00000297    ;     la              t0, tick_flag
 00040280: DF428293    ; 
-00040284: 0002A023    ;                sw              zero, [t0]
+00040284: 0002A023    ;     sw              zero, [t0]
 00040288:             ; 
 00040288:             ; 
-00040288: 00400893    ;                li              a7, 4              ; ensure timer starts cleanly
-0004028C: 00000073    ;                ecall
+00040288: 00400893    ;     li              a7, 4              ; ensure timer starts cleanly
+0004028C: 00000073    ;     ecall
 00040290:             ; 
 00040290:             ; 
-00040290: EC9FF0EF    ;                call            displayTime
-00040294: 0040006F    ;                j               running
+00040290: EC9FF0EF    ;     call            displayTime
+00040294: 0040006F    ;     j               running
 00040298:             ; 
 00040298:             ; 
 00040298:             ; running
-00040298:             ;                ; Still poll buttons in user mode for pause.
-00040298: 00500893    ;                li              a7, 5
-0004029C: 00000073    ;                ecall
-000402A0: 00257293    ;                andi            t0, a0, BTTN2
-000402A4: 04029063    ;                bnez            t0, paused
+00040298:             ;     ; Still poll buttons in user mode for pause.
+00040298: 00500893    ;     li              a7, 5
+0004029C: 00000073    ;     ecall
+000402A0: 00257293    ;     andi            t0, a0, BTTN2
+000402A4: 04029063    ;     bnez            t0, paused
 000402A8:             ; 
 000402A8:             ; 
-000402A8:             ;                ; Consume one-second tick set by timer interrupt handler.
-000402A8: 00000297    ;                la              t0, tick_flag
+000402A8:             ;     ; Consume one-second tick set by timer interrupt handler.
+000402A8: 00000297    ;     la              t0, tick_flag
 000402AC: DC828293    ; 
-000402B0: 0002A303    ;                lw              t1, [t0]
-000402B4: FE0302E3    ;                beqz            t1, running
+000402B0: 0002A303    ;     lw              t1, [t0]
+000402B4: FE0302E3    ;     beqz            t1, running
 000402B8:             ; 
 000402B8:             ; 
-000402B8: 0002A023    ;                sw              zero, [t0]
+000402B8: 0002A023    ;     sw              zero, [t0]
 000402BC:             ; 
 000402BC:             ; 
-000402BC: 00140413    ;                addi            s0, s0, 1
-000402C0: 03C00393    ;                li              t2, 60
-000402C4: 00744C63    ;                blt             s0, t2, showTime
+000402BC: 00140413    ;     addi            s0, s0, 1
+000402C0: 03C00393    ;     li              t2, 60
+000402C4: 00744C63    ;     blt             s0, t2, showTime
 000402C8:             ; 
 000402C8:             ; 
-000402C8: 00000413    ;                li              s0, 0
-000402CC: 00148493    ;                addi            s1, s1, 1
-000402D0: 0074C663    ;                blt             s1, t2, showTime
+000402C8: 00000413    ;     li              s0, 0
+000402CC: 00148493    ;     addi            s1, s1, 1
+000402D0: 0074C663    ;     blt             s1, t2, showTime
 000402D4:             ; 
 000402D4:             ; 
-000402D4: 00000493    ;                li              s1, 0
-000402D8: 00190913    ;                addi            s2, s2, 1
+000402D4: 00000493    ;     li              s1, 0
+000402D8: 00190913    ;     addi            s2, s2, 1
 000402DC:             ; 
 000402DC:             ; 
 000402DC:             ; showTime
-000402DC: E7DFF0EF    ;                call            displayTime
-000402E0: FB9FF06F    ;                j               running
+000402DC: E7DFF0EF    ;     call            displayTime
+000402E0: FB9FF06F    ;     j               running
 000402E4:             ; 
 000402E4:             ; 
 000402E4:             ; paused
-000402E4: 00800893    ;                li              a7, 8
-000402E8: 00000073    ;                ecall
-000402EC: F2DFF0EF    ;                call            displayPauseScreen
+000402E4: 00800893    ;     li              a7, 8
+000402E8: 00000073    ;     ecall
+000402EC: F2DFF0EF    ;     call            displayPauseScreen
 000402F0:             ; 
 000402F0:             ; 
 000402F0:             ; pauseLoop
-000402F0: 00500893    ;                li              a7, 5
-000402F4: 00000073    ;                ecall
+000402F0: 00500893    ;     li              a7, 5
+000402F4: 00000073    ;     ecall
 000402F8:             ; 
 000402F8:             ; 
-000402F8: 00157293    ;                andi            t0, a0, BTTN1
-000402FC: 00029863    ;                bnez            t0, resumeTimer
+000402F8: 00157293    ;     andi            t0, a0, BTTN1
+000402FC: 00029863    ;     bnez            t0, resumeTimer
 00040300:             ; 
 00040300:             ; 
-00040300: 00457293    ;                andi            t0, a0, BTTN3
-00040304: 00029C63    ;                bnez            t0, resetTimer
+00040300: 00457293    ;     andi            t0, a0, BTTN3
+00040304: 00029C63    ;     bnez            t0, resetTimer
 00040308:             ; 
 00040308:             ; 
-00040308: FE9FF06F    ;                j               pauseLoop
+00040308: FE9FF06F    ;     j               pauseLoop
 0004030C:             ; 
 0004030C:             ; 
 0004030C:             ; resumeTimer
-0004030C: 00900893    ;                li              a7, 9
-00040310: 00000073    ;                ecall
-00040314: E45FF0EF    ;                call            displayTime
-00040318: F81FF06F    ;                j               running
+0004030C: 00900893    ;     li              a7, 9
+00040310: 00000073    ;     ecall
+00040314: E45FF0EF    ;     call            displayTime
+00040318: F81FF06F    ;     j               running
 0004031C:             ; 
 0004031C:             ; 
 0004031C:             ; resetTimer
-0004031C: 00000413    ;                li              s0, 0
-00040320: 00000493    ;                li              s1, 0
-00040324: 00000913    ;                li              s2, 0
-00040328: 00000297    ;                la              t0, tick_flag
+0004031C: 00000413    ;     li              s0, 0
+00040320: 00000493    ;     li              s1, 0
+00040324: 00000913    ;     li              s2, 0
+00040328: 00000297    ;     la              t0, tick_flag
 0004032C: D4828293    ; 
-00040330: 0002A023    ;                sw              zero, [t0]
-00040334: F29FF06F    ;                j               START
+00040330: 0002A023    ;     sw              zero, [t0]
+00040334: F29FF06F    ;     j               START
 00040338:             ; 
 00040338:             ; 
 00040338: 0000006F    ; END             j       .

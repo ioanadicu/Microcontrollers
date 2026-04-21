@@ -1,12 +1,15 @@
 KMD
 00000000:             ; ; =============================================================================
-00000000:             ; ; Exercise 4: System Calls
+00000000:             ; ; Exercise 5: Counters and Timers
 00000000:             ; ; Maria-Ioana Dicu
-00000000:             ; ; 12 March 2026
+00000000:             ; ; 24 April 2026
 00000000:             ; ;
-00000000:             ; ; A simple timer application adapted to run in user mode within a primitive OS.
+00000000:             ; ; A stopwatch application adapted to run in user mode withn a primitive OS.
 00000000:             ; ; The machine-mode section sets up trap handling and dispatches system calls,
 00000000:             ; ; while the user-mode section contains the application logic.
+00000000:             ; ;
+00000000:             ; ; The program uses the hardware timer as a reference to count seconds
+00000000:             ; ; accurately, with board buttons used to start, pause, and reset the count.
 00000000:             ; ;
 00000000:             ; ; External libraries:
 00000000:             ; ;   - DisplayOperations.s   : LCD routines
@@ -15,6 +18,7 @@ KMD
 00000000:             ; ; Notes:
 00000000:             ; ;   - The display-related logic was moved into helper libraries to reduce
 00000000:             ; ;     repetition and keep the main application clearer.
+00000000:             ; ;   - Timer access is performed through ECALLs to preserve hardware abstraction.
 00000000:             ; ; =============================================================================
 00000000:             ; 
 00000000:             ; 
