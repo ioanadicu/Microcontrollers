@@ -280,13 +280,13 @@ interrupt_exit
 ; =============================================================================
 
 scan_keyboard
-    li      t0, 0                  ; output-line index: 0..3
+    li      t0, 0                  ; t0 = which output line we are scanning now
 
 scan_row_loop
     ; clear all output lines first
-    li      t1, PIO_BASE
-    li      t2, ROW_MASK
-    sw      t2, PIO_CLR[t1]        ; offset 08
+    li      t1, PIO_BASE            ; t1 = address of keyboard PIO device
+    li      t2, ROW_MASK            ; t2 = mask for all ouput lines (ROW_MASK = bits 8, 9, 10, 11)
+    sw      t2, PIO_CLR[t1]        ; offset 08, turn OFF all output lines
 
     ; small settle delay
     nop
@@ -295,11 +295,11 @@ scan_row_loop
     nop
 
     ; activate one output line using offset 0C
-    la      t2, row_drive_table
-    slli    t3, t0, 2              ; table index = row * 4 bytes
-    add     t2, t2, t3
+    la      t2, row_drive_table    ; t2 = address of the table containing bit 8, 9, 10, 11
+    slli    t3, t0, 2              ; table index (t3) = row ( t0) * 4 bytes
+    add     t2, t2, t3             ; t2 now points to correct table entry
     lw      t4, [t2]               ; 0x100, 0x200, 0x400, or 0x800
-    sw      t4, PIO_SET[t1]        ; offset 0C = data set
+    sw      t4, PIO_SET[t1]        ; offset 0C = data set, activating the line
 
     ; small settle delay
     nop
@@ -308,70 +308,70 @@ scan_row_loop
     nop
 
     ; read input bits 12-15
-    lw      t5, PIO_DATA[t1]
-    andi    t5, t5, COL_MASK
+    lw      t5, PIO_DATA[t1]       ; reading whole PIO data register
+    andi    t5, t5, COL_MASK       ; keeping only input bits 12,13,14,15 everything else ignored
     srli    t5, t5, 12             ; move bits 12-15 down to bits 0-3
 
-    li      t6, 0                  ; input index: 0..3
+    li      t6, 0                  ; t6 = which input bit we are checking now
 
 scan_col_loop
     ; a0 = 1 if this input bit is active, otherwise 0
-    srl     a0, t5, t6
-    andi    a0, a0, 1
+    srl     a0, t5, t6            ; shifting input value to irght by t6 (moving input bit we care about into bit 0)
+    andi    a0, a0, 1             ; keeping only bit 0 (now a0 is either 1 if this key position is active or 0 if not active)
 
     ; key index = output_line * 4 + input_index
-    slli    a1, t0, 2
-    add     a1, a1, t6
+    slli    a1, t0, 2            ; a1 = output line index * 4, each output line has 4 possible input positions
+    add     a1, a1, t6            ; a1 = key index (e.g. output bit 8 input bit 13 = index 1 = 7
 
     ; update debounce history byte
-    la      a2, key_history
-    add     a2, a2, a1
-    lbu     a3, [a2]
+    la      a2, key_history        ; a2 = address of debounce array
+    add     a2, a2, a1            ; a2 = address of specific key history
+    lbu     a3, [a2]              ; a3 = old history byte for this key
 
-    slli    a3, a3, 1
-    or      a3, a3, a0
-    andi    a3, a3, 0xFF
-    sb      a3, [a2]
+    slli    a3, a3, 1            ; shift history left by 1 to make space
+    or      a3, a3, a0            ; put newest reading into history
+    andi    a3, a3, 0xFF           ; keep only last 8 readings
+    sb      a3, [a2]            ; save updated history back to memory
 
     ; check previous stable state
-    la      a4, key_state
-    add     a4, a4, a1
-    lbu     a5, [a4]
+    la      a4, key_state        ; a4 = address of the stable key state array
+    add     a4, a4, a1            ; a4 = addess of this specific key's state byte
+    lbu     a5, [a4]            ; a5 = old stable state of this key ( 0 -released, 1- pressed)
 
     ; if history == FF and previous state was released, new key press
     li      a6, 0xFF
-    bne     a3, a6, check_key_release
-    bnez    a5, next_key
+    bne     a3, a6, check_key_release       ; this means the key has been active 8 times in a row
+    bnez    a5, next_key                    ; if state is 1 we already counted this press
 
-    li      a5, 1
-    sb      a5, [a4]
+    li      a5, 1                            ; key oficially pressed
+    sb      a5, [a4]                        ; key_state = 1
 
     ; translate physical key position to ASCII
-    la      a6, key_ascii_table
-    add     a6, a6, a1
-    lbu     a0, [a6]
+    la      a6, key_ascii_table            ;a6 = address of the table that maps key position to character
+    add     a6, a6, a1                    ; a6 = address of the character for this key index
+    lbu     a0, [a6]                        ; a0 = ASCII character for this key
 
-    ; ignore blank/undefined if needed
-    li      a2, ' '
+    ; ignore blank/undefined if needed   
+    li      a2, ' '                        
     beq     a0, a2, next_key
 
-    call    fifo_put
-    j       next_key
+    call    fifo_put                        ; store the key character so user code can read it
+    j       next_key                        ; finished with this key position
 
 check_key_release
     ; if history == 00, mark key released
-    bnez    a3, next_key
-    beqz    a5, next_key
-    sb      zero, [a4]
+    bnez    a3, next_key                    ; if history is not 0 it is not fully released yet
+    beqz    a5, next_key                    ; if key state already 0 it has been released
+    sb      zero, [a4]                      ; if ended up here history is 0 and state 1 so mark this as released
 
 next_key
-    addi    t6, t6, 1
-    li      a0, 4
-    blt     t6, a0, scan_col_loop
+    addi    t6, t6, 1                        ; move to the next input bit
+    li      a0, 4                            ; there are 4 input bits to check
+    blt     t6, a0, scan_col_loop            ; if t6 < 4 keep checking inputs for this output line
 
-    addi    t0, t0, 1
-    li      a0, 4
-    blt     t0, a0, scan_row_loop
+    addi    t0, t0, 1                        ; move to next output line
+    li      a0, 4                            ; there are 4 output lines
+    blt     t0, a0, scan_row_loop            ; if t0 < 4 scan next output line
 
     ; turn all output lines off before leaving
     li      t1, PIO_BASE
