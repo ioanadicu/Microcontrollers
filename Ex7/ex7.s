@@ -44,8 +44,10 @@ PIO_DIR         EQU     0x04
 PIO_CLR         EQU     0x08
 PIO_SET         EQU     0x0C
 
-ROW_MASK        EQU     0x0F            ; bits 0..3
-COL_MASK        EQU     0xF0            ; bits 4..7
+ROW_MASK        EQU     0x00000F00      ; bits 8-11 outputs
+COL_MASK        EQU     0x0000F000      ; bits 12-15 inputs
+
+KEY_DIR         EQU     0x0000F000      ; bits 12-15 input, rest output
 
 SCAN_MODULUS    EQU     999             ; 1 ms if timer ticks every 1 us
 
@@ -57,16 +59,16 @@ ecall_max       EQU     (ecall_end - ecall_0) / 4
 ; =============================================================================
 
 row_drive_table
-    defw    0x01
-    defw    0x02
-    defw    0x04
-    defw    0x08
+    defw    0x00000100      ; output bit 8
+    defw    0x00000200      ; output bit 9
+    defw    0x00000400      ; output bit 10
+    defw    0x00000800      ; output bit 11
 
 key_ascii_table
-    defb    "123A"
-    defb    "456B"
-    defb    "789C"
-    defb    "*0#D"
+    defb    "*741"          ; bit 8 active, inputs 12,13,14,15
+    defb    "0852"          ; bit 9 active
+    defb    "#963"          ; bit 10 active
+    defb    "C=-+"          ; bit 11 active
     align
 
 key_history
@@ -140,12 +142,13 @@ initialisation
     ; everything else input
     ; -------------------------
     li      t0, PIO_BASE
-    li      t1, 0xFFFF_FFF0
-    sw      t1, PIO_DIR[t0]
+    
+    li      t1, KEY_DIR          ; 0x0000F000
+    sw      t1, PIO_DIR[t0]      ; offset 04 = direction
 
     ; all rows inactive initially
     li      t1, ROW_MASK
-    sw      t1, PIO_CLR[t0]
+    sw      t1, PIO_CLR[t0]      ; turn all output lines off
 
     ; clear debounce/state/fifo vars
     la      t0, key_history
@@ -277,88 +280,87 @@ interrupt_exit
 ; =============================================================================
 
 scan_keyboard
-    li      t0, 0                  ; row number 0..3
+    li      t0, 0                  ; output-line index: 0..3
 
 scan_row_loop
-    ; deactivate all rows
+    ; clear all output lines first
     li      t1, PIO_BASE
     li      t2, ROW_MASK
-    sw      t2, PIO_CLR[t1]
+    sw      t2, PIO_CLR[t1]        ; offset 08
 
-    ; short settle delay
-    nop
-    nop
-    nop
-    nop
+    ; small settle delay
     nop
     nop
     nop
     nop
 
-    ; activate selected row
+    ; activate one output line using offset 0C
     la      t2, row_drive_table
-    slli    t3, t0, 2
+    slli    t3, t0, 2              ; table index = row * 4 bytes
     add     t2, t2, t3
-    lw      t4, [t2]
-    sw      t4, PIO_SET[t1]
+    lw      t4, [t2]               ; 0x100, 0x200, 0x400, or 0x800
+    sw      t4, PIO_SET[t1]        ; offset 0C = data set
 
-    ; short settle delay
-    nop
-    nop
-    nop
-    nop
+    ; small settle delay
     nop
     nop
     nop
     nop
 
-    ; read columns
+    ; read input bits 12-15
     lw      t5, PIO_DATA[t1]
     andi    t5, t5, COL_MASK
-    srli    t5, t5, 4              ; now bits 0..3 correspond to columns
+    srli    t5, t5, 12             ; move bits 12-15 down to bits 0-3
 
-    li      t6, 0                  ; column number 0..3
+    li      t6, 0                  ; input index: 0..3
 
 scan_col_loop
-    ; sample this key into a2: 0 or 1
+    ; a0 = 1 if this input bit is active, otherwise 0
     srl     a0, t5, t6
     andi    a0, a0, 1
 
-    ; index = row*4 + col
+    ; key index = output_line * 4 + input_index
     slli    a1, t0, 2
     add     a1, a1, t6
 
-    ; update history byte
+    ; update debounce history byte
     la      a2, key_history
     add     a2, a2, a1
     lbu     a3, [a2]
+
     slli    a3, a3, 1
     or      a3, a3, a0
     andi    a3, a3, 0xFF
     sb      a3, [a2]
 
-    ; check stable state byte
+    ; check previous stable state
     la      a4, key_state
     add     a4, a4, a1
     lbu     a5, [a4]
 
-    ; if history == 0xFF and currently released -> press event
+    ; if history == FF and previous state was released, new key press
     li      a6, 0xFF
-    bne     a3, a6, check_release
+    bne     a3, a6, check_key_release
     bnez    a5, next_key
 
     li      a5, 1
     sb      a5, [a4]
 
-    ; enqueue ASCII
+    ; translate physical key position to ASCII
     la      a6, key_ascii_table
     add     a6, a6, a1
     lbu     a0, [a6]
+
+    ; ignore blank/undefined if needed
+    li      a2, ' '
+    beq     a0, a2, next_key
+
     call    fifo_put
     j       next_key
 
-check_release
-    bnez    a3, next_key           ; only interested in 0x00 release here
+check_key_release
+    ; if history == 00, mark key released
+    bnez    a3, next_key
     beqz    a5, next_key
     sb      zero, [a4]
 
@@ -371,7 +373,7 @@ next_key
     li      a0, 4
     blt     t0, a0, scan_row_loop
 
-    ; all rows inactive on exit
+    ; turn all output lines off before leaving
     li      t1, PIO_BASE
     li      t2, ROW_MASK
     sw      t2, PIO_CLR[t1]
