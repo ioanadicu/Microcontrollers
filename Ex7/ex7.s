@@ -23,6 +23,7 @@ bit0            EQU     0x0000_0001
 bit31           EQU     0x8000_0000
 
 MSTATUS_MIE     EQU     0x8
+MSTATUS_MPIE    EQU     0x80
 MIE_MEIE        EQU     0x800
 
 INTR_CTRL       EQU     0x0001_0400
@@ -45,7 +46,7 @@ PIO_CLR         EQU     0x08
 PIO_SET         EQU     0x0C
 
 ROW_MASK        EQU     0x00000F00      ; bits 8-11 outputs
-COL_MASK        EQU     0x0000F000      ; bits 12-15 inputs
+COL_MASK        EQU     0xF000      ; bits 12-15 inputs
 
 KEY_DIR         EQU     0x0000F000      ; bits 12-15 input, rest output
 
@@ -67,7 +68,7 @@ row_drive_table
 key_ascii_table
     defb    "*741"          ; bit 8 active, inputs 12,13,14,15
     defb    "0852"          ; bit 9 active
-    defb    "#963"          ; bit 10 active
+    defb    "#963"        ; bit 10 active
     defb    "C=-+"          ; bit 11 active
     align
 
@@ -132,14 +133,11 @@ initialisation
     li      t0, MIE_MEIE
     csrs    MIE, t0
 
-    li      t0, MSTATUS_MIE
+    li      t0, MSTATUS_MPIE
     csrs    MSTATUS, t0
 
     ; -------------------------
     ; PIO setup for keypad
-    ; rows 0..3 = outputs
-    ; cols 4..7 = inputs
-    ; everything else input
     ; -------------------------
     li      t0, PIO_BASE
     
@@ -280,7 +278,10 @@ interrupt_exit
 ; =============================================================================
 
 scan_keyboard
-    li      t0, 0                  ; t0 = which output line we are scanning now
+    subi    sp, sp, 4
+    sw      ra, 0[sp]
+
+    li      t0, 0
 
 scan_row_loop
     ; clear all output lines first
@@ -309,7 +310,8 @@ scan_row_loop
 
     ; read input bits 12-15
     lw      t5, PIO_DATA[t1]       ; reading whole PIO data register
-    andi    t5, t5, COL_MASK       ; keeping only input bits 12,13,14,15 everything else ignored
+    li      t3, COL_MASK
+    and     t5, t5, t3             ; keeping only input bits 12-15
     srli    t5, t5, 12             ; move bits 12-15 down to bits 0-3
 
     li      t6, 0                  ; t6 = which input bit we are checking now
@@ -317,7 +319,9 @@ scan_row_loop
 scan_col_loop
     ; a0 = 1 if this input bit is active, otherwise 0
     srl     a0, t5, t6            ; shifting input value to irght by t6 (moving input bit we care about into bit 0)
-    andi    a0, a0, 1             ; keeping only bit 0 (now a0 is either 1 if this key position is active or 0 if not active)
+    andi    a0, a0, 1      ; rows 0..3 = outputs
+    ; cols 4..7 = inputs
+    ; everything else input       ; keeping only bit 0 (now a0 is either 1 if this key position is active or 0 if not active)
 
     ; key index = output_line * 4 + input_index
     slli    a1, t0, 2            ; a1 = output line index * 4, each output line has 4 possible input positions
@@ -355,7 +359,16 @@ scan_col_loop
     li      a2, ' '                        
     beq     a0, a2, next_key
 
+    subi    sp, sp, 8
+    sw      t0, 4[sp]
+    sw      t6, 0[sp]
+
     call    fifo_put                        ; store the key character so user code can read it
+
+    lw      t6, 0[sp]
+    lw      t0, 4[sp]
+    addi    sp, sp, 8
+
     j       next_key                        ; finished with this key position
 
 check_key_release
@@ -376,8 +389,12 @@ next_key
     ; turn all output lines off before leaving
     li      t1, PIO_BASE
     li      t2, ROW_MASK
-    sw      t2, PIO_CLR[t1]
+    sw      t2, PIO_CLR[t1]; rows 0..3 = outputs
+    ; cols 4..7 = inputs
+    ; everything else input
 
+    lw      ra, 0[sp]
+    addi    sp, sp, 4
     ret
 
 
@@ -547,6 +564,7 @@ ecall_9
 
 ecall_10
     call    fifo_get
+    sw      a0, 32[sp]
     j       ecall_exit
 
 ecall_end
@@ -609,7 +627,7 @@ main_loop
     beqz    a0, main_loop
 
     ; print returned character in a0
-    li      a1, LIGHT
+    li      a1, LIGHT | RS
     li      a7, 1
     ecall
 
