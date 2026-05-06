@@ -31,7 +31,7 @@
 ; Ecall table size
 ; =============================================================================
 
-ecall_max       EQU     (ecall_end - ecall_0) / 4
+ecall_max       EQU     (ecall_jump_end - ecall_jump) / 4
 
 
 ; =============================================================================
@@ -230,7 +230,7 @@ ecall_jump
     defw    ecall_8                ; Unused
     defw    ecall_9                ; Unused
     defw    ecall_10               ; Get next keypad character
-
+ecall_jump_end
 
 ; =============================================================================
 ; Ecall service routines
@@ -292,9 +292,6 @@ ecall_10
     call    fifo_get
     sw      a0, 32[sp]             ; Preserve return value through restore
     j       ecall_exit
-
-
-ecall_end
 
 
 ; =============================================================================
