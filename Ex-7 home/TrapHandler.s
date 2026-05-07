@@ -223,13 +223,7 @@ ecall_jump
     defw    ecall_1                ; Print character
     defw    ecall_2                ; Print string
     defw    ecall_3                ; Move cursor to second line
-    defw    ecall_4                ; Unused
-    defw    ecall_5                ; Unused
-    defw    ecall_6                ; Unused
-    defw    ecall_7                ; Unused
-    defw    ecall_8                ; Unused
-    defw    ecall_9                ; Unused
-    defw    ecall_10               ; Get next keypad character
+    defw    ecall_4                ; Get next keypad character
 ecall_jump_end
 
 ; =============================================================================
@@ -264,32 +258,7 @@ ecall_3
     call    lcdSendCommand
     j       ecall_exit
 
-
 ecall_4
-    j       ecall_exit
-
-
-ecall_5
-    j       ecall_exit
-
-
-ecall_6
-    j       ecall_exit
-
-
-ecall_7
-    j       ecall_exit
-
-
-ecall_8
-    j       ecall_exit
-
-
-ecall_9
-    j       ecall_exit
-
-
-ecall_10
     call    fifo_get
     sw      a0, 32[sp]             ; Preserve return value through restore
     j       ecall_exit

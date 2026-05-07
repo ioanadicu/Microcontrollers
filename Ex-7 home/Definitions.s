@@ -96,4 +96,4 @@ ECALL_CLEAR_DISPLAY     EQU     0
 ECALL_PRINT_CHAR        EQU     1
 ECALL_PRINT_STRING      EQU     2
 ECALL_NEXT_LINE         EQU     3
-ECALL_GET_KEY           EQU     10
+ECALL_GET_KEY           EQU     4
