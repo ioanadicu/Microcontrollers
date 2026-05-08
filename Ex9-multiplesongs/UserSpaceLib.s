@@ -1,7 +1,7 @@
 ; =============================================================================
 ; User Space Screen Routines
 ; Maria-Ioana Dicu
-; 12 March 2026
+; 8 May 2026
 ;
 ; This file contains helper routines used to print common screens and values
 ; through the display-related ecalls.
@@ -22,10 +22,6 @@
 ;   - displayPauseScreen()
 ;       Prints the pause screen.
 ;
-; Notes:
-;   - These routines do not directly control the LCD hardware.
-;   - They rely on ecalls that perform display operations such as clearing the
-;     screen, printing strings, printing characters, and moving to the next line.
 ; =============================================================================
 
 
@@ -59,7 +55,6 @@ printDec
 
     bnez    s0, decLoop
     li      a0, '0'
-    ;li      a1, LIGHT | RS
 
     li      a7, ECALL_PRINT_CHAR
     ecall 
@@ -90,7 +85,6 @@ decLoop
 printLoop
     lw      a0, 0[sp]
     addi    sp, sp, 4
-    ;li      a1, LIGHT | RS
 
     li      a7, ECALL_PRINT_CHAR
     ecall 

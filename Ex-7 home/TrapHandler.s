@@ -237,7 +237,7 @@ ecall_0
 
 
 ecall_1
-    li      a1, LIGHT | RS ; new change!!
+    li      a1, LIGHT | RS
     call    lcdSendCommand
     j       ecall_exit
 

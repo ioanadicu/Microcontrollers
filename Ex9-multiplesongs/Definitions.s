@@ -1,17 +1,14 @@
 ; =============================================================================
 ; Definitions
 ; Maria-Ioana Dicu
-; 12 March 2026
+; 8 May 2026
 ;
-; Shared constants used by the Exercise 7 operating-system code, trap handler,
+; Shared constants used by the Exercise 9 operating-system code, trap handler,
 ; timer setup, interrupt controller and memory-mapped I/O routines.
 ;
 ; This file contains only compile-time constants. It does not reserve memory or
 ; contain executable code.
 ;
-; Notes:
-;   - Hardware devices are accessed only from machine mode.
-;   - The user application should access hardware indirectly through ecalls.
 ; =============================================================================
 
 
@@ -97,8 +94,7 @@ ECALL_PRINT_CHAR        EQU     1
 ECALL_PRINT_STRING      EQU     2
 ECALL_NEXT_LINE         EQU     3
 ECALL_GET_KEY           EQU     4
-
-; ECALL to read board buttons (SW1..SW3)
+ECALL_PLAY_NOTE         EQU     5
 ECALL_READ_BUTTONS      EQU     6
 
 
@@ -106,7 +102,6 @@ ECALL_READ_BUTTONS      EQU     6
 ; Custom Hardware
 ; =============================================================================
 BUZZER_BASE             EQU     0x0002_0000
-ECALL_PLAY_NOTE         EQU     5
 
 
 ; =============================================================================
@@ -115,7 +110,10 @@ ECALL_PLAY_NOTE         EQU     5
 SYS_CTRL_BASE           EQU     0x0001_0700
 PIN_FUNC_OFFSET         EQU     0x08
 
-; Buttons (from Ex5)
+
+; =============================================================================
+; Buttons
+; =============================================================================
 BUTTONS                 EQU     0x0001_0001
 BTTN1                   EQU     0b0001
 BTTN2                   EQU     0b0010

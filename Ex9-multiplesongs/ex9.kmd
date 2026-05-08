@@ -1,7 +1,18 @@
 KMD
 00000000:             ; ; =============================================================================
-00000000:             ; ; Exercise 7: Key Debouncing and Keyboard Scanning
+00000000:             ; ; Exercise 9: Music Player
 00000000:             ; ; Maria-Ioana Dicu
+00000000:             ; ; 8 May 2026
+00000000:             ; ;
+00000000:             ; ; This program acts as a virtual machine that interprets song data (tunes).
+00000000:             ; ; It supports:
+00000000:             ; ;   - Keypad selection for multiple songs (tune1.s, tune2.s)
+00000000:             ; ;   - Pitch and duration interpretation via a Look-Up Table (LUT)
+00000000:             ; ;   - Note separators for staccato articulation
+00000000:             ; ;   - Hardware-driven timing using OS system calls
+00000000:             ; ;   - User interruption via SW1 to return to the main menu
+00000000:             ; ;
+00000000:             ; ; Hardware Requirement: Custom Verilog User_Peripheral (Buzzer)
 00000000:             ; ; =============================================================================
 00000000:             ; 
 00000000:             ; ORG             0x0000_0000
@@ -11,7 +22,7 @@ KMD
 00000004:             ; ; =============================================================================
 00000004:             ; ; Definitions
 00000004:             ; ; Maria-Ioana Dicu
-00000004:             ; ; 12 March 2026
+00000004:             ; ; 8 May 2026
 00000004:             ; ;
 00000004:             ; ; Shared constants used by the Exercise 7 operating-system code, trap handler,
 00000004:             ; ; timer setup, interrupt controller and memory-mapped I/O routines.
@@ -135,7 +146,7 @@ KMD
 00000004:             ; ; =============================================================================
 00000004:             ; ; Display Operations Library
 00000004:             ; ; Maria-Ioana Dicu
-00000004:             ; ; 12 March 2026
+00000004:             ; ; 8 May 2026
 00000004:             ; ;
 00000004:             ; ; Provides helper routines for driving the LCD display:
 00000004:             ; ;   - printString(pointer)
@@ -149,8 +160,6 @@ KMD
 00000004:             ; ;   HD44780 LCD controller documentation:
 00000004:             ; ;   https://cdn.sparkfun.com/assets/9/5/f/7/b/HD44780.pdf
 00000004:             ; ;
-00000004:             ; ; Notes:
-00000004:             ; ;   - Delay value may still need tuning depending on hardware timing.
 00000004:             ; ; =============================================================================
 00000004:             ; 
 00000004:             ; 
@@ -265,8 +274,7 @@ KMD
 0000007C: 00900293    ;     li      t0, LIGHT | RW 
 00000080: 005400A3    ;     sb      t0, LCD_REG_CTRL[s0]
 00000084:             ; 
-00000084:             ;     ; Separate enable pulses
-00000084:             ;             ; waiting_loop only uses t0 so not saving registers (intentional)  
+00000084:             ;     ; Separate enable pulses 
 00000084: 038000EF    ;     call    waiting_loop
 00000088:             ; 
 00000088:             ;     ; Repeat while bit 7 high
@@ -289,7 +297,6 @@ KMD
 0000009C: 005400A3    ;     sb      t0, LCD_REG_CTRL[s0]
 000000A0:             ; 
 000000A0:             ;     ; Delay to stretch pulse
-000000A0:             ;             ; waiting_loop only uses t0 so not saving registers (intentional)
 000000A0: 01C000EF    ;     call    waiting_loop
 000000A4:             ; 
 000000A4:             ;     ; Disable signal 0
@@ -331,7 +338,7 @@ KMD
 000000DC:             ; ; =============================================================================
 000000DC:             ; ; Keypad Library
 000000DC:             ; ; Maria-Ioana Dicu
-000000DC:             ; ; 12 March 2026
+000000DC:             ; ; 8 May 2026
 000000DC:             ; ;
 000000DC:             ; ; Provides keypad scanning, software debouncing and character buffering.
 000000DC:             ; ;
@@ -353,11 +360,6 @@ KMD
 000000DC:             ; ;   - fifo_get()
 000000DC:             ; ;       Returns the next buffered key character, or 0 if the buffer is empty.
 000000DC:             ; ;
-000000DC:             ; ; Notes:
-000000DC:             ; ;   - scan_keyboard is called from the timer interrupt handler.
-000000DC:             ; ;   - fifo_get is called from ecall_10.
-000000DC:             ; ;   - fifo_buf is not cleared when characters are read; fifo_head/fifo_tail
-000000DC:             ; ;     determine whether the buffer is empty or contains unread characters.
 000000DC:             ; ; =============================================================================
 000000DC:             ; 
 000000DC:             ; 
@@ -701,7 +703,7 @@ KMD
 000002F0:             ; ; =============================================================================
 000002F0:             ; ; Trap and Interrupt Handler
 000002F0:             ; ; Maria-Ioana Dicu
-000002F0:             ; ; 12 March 2026
+000002F0:             ; ; 8 May 2026
 000002F0:             ; ;
 000002F0:             ; ; Handles traps and interrupts for Exercise 7.
 000002F0:             ; ;
@@ -958,7 +960,7 @@ KMD
 000004CC:             ; 
 000004CC:             ; 
 000004CC:             ; ecall_1
-000004CC: 00A00593    ;     li      a1, LIGHT | RS ; new change!!
+000004CC: 00A00593    ;     li      a1, LIGHT | RS
 000004D0: B7DFF0EF    ;     call    lcdSendCommand
 000004D4: 0480006F    ;     j       ecall_exit
 000004D8:             ; 
@@ -1006,7 +1008,7 @@ KMD
 0000052C:             ; ; =============================================================================
 0000052C:             ; ; Operating System Initialisation
 0000052C:             ; ; Maria-Ioana Dicu
-0000052C:             ; ; 12 March 2026
+0000052C:             ; ; 8 May 2026
 0000052C:             ; ;
 0000052C:             ; ; Performs the machine-mode setup needed before entering the user programme.
 0000052C:             ; ;
@@ -1019,11 +1021,6 @@ KMD
 0000052C:             ; ;   - Clear keypad debounce state and FIFO pointers.
 0000052C:             ; ;   - Enter user mode using mret.
 0000052C:             ; ;
-0000052C:             ; ; Notes:
-0000052C:             ; ;   - MSTATUS_MPIE is set instead of MSTATUS_MIE. mret then copies MPIE into
-0000052C:             ; ;     MIE when entering user mode.
-0000052C:             ; ;   - Hardware setup is done in machine mode because user mode cannot access
-0000052C:             ; ;     protected I/O addresses directly.
 0000052C:             ; ; =============================================================================
 0000052C:             ; 
 0000052C:             ; 
@@ -1221,7 +1218,7 @@ KMD
 000400BC:             ; ; =============================================================================
 000400BC:             ; ; User Space Screen Routines
 000400BC:             ; ; Maria-Ioana Dicu
-000400BC:             ; ; 12 March 2026
+000400BC:             ; ; 8 May 2026
 000400BC:             ; ;
 000400BC:             ; ; This file contains helper routines used to print common screens and values
 000400BC:             ; ; through the display-related ecalls.
@@ -1242,10 +1239,6 @@ KMD
 000400BC:             ; ;   - displayPauseScreen()
 000400BC:             ; ;       Prints the pause screen.
 000400BC:             ; ;
-000400BC:             ; ; Notes:
-000400BC:             ; ;   - These routines do not directly control the LCD hardware.
-000400BC:             ; ;   - They rely on ecalls that perform display operations such as clearing the
-000400BC:             ; ;     screen, printing strings, printing characters, and moving to the next line.
 000400BC:             ; ; =============================================================================
 000400BC:             ; 
 000400BC:             ; 
@@ -1279,7 +1272,6 @@ KMD
 000400D4:             ; 
 000400D4: 00041A63    ;     bnez    s0, decLoop
 000400D8: 03000513    ;     li      a0, '0'
-000400DC:             ;     ;li      a1, LIGHT | RS
 000400DC:             ; 
 000400DC: 00100893    ;     li      a7, ECALL_PRINT_CHAR
 000400E0: 00000073    ;     ecall 
@@ -1310,7 +1302,6 @@ KMD
 00040108:             ; printLoop
 00040108: 00012503    ;     lw      a0, 0[sp]
 0004010C: 00410113    ;     addi    sp, sp, 4
-00040110:             ;     ;li      a1, LIGHT | RS
 00040110:             ; 
 00040110: 00100893    ;     li      a7, ECALL_PRINT_CHAR
 00040114: 00000073    ;     ecall 
@@ -1335,12 +1326,15 @@ KMD
 00040134:             ;     ; Show homescreen and wait for keypad selection
 00040134: 00000893    ;     li      a7, ECALL_CLEAR_DISPLAY
 00040138: 00000073    ;     ecall
+0004013C:             ; 
 0004013C: 00000517    ;     la      a0, homeLine1
 00040140: ED450513    ; 
 00040144: 00200893    ;     li      a7, ECALL_PRINT_STRING
 00040148: 00000073    ;     ecall
+0004014C:             ; 
 0004014C: 00300893    ;     li      a7, ECALL_NEXT_LINE
 00040150: 00000073    ;     ecall
+00040154:             ; 
 00040154: 00000517    ;     la      a0, homeLine2
 00040158: ECC50513    ; 
 0004015C: 00200893    ;     li      a7, ECALL_PRINT_STRING
@@ -1349,6 +1343,7 @@ KMD
 00040164:             ; wait_for_key
 00040164: 00400893    ;     li      a7, ECALL_GET_KEY
 00040168: 00000073    ;     ecall
+0004016C:             ;     
 0004016C: FE050CE3    ;     beqz    a0, wait_for_key
 00040170:             ; 
 00040170: 03100293    ;     li      t0, '1'
@@ -1368,9 +1363,9 @@ KMD
 00040198:             ; 
 00040198:             ; start_play
 00040198: 000204B7    ;     li      s1, BUZZER_BASE     ; s1 = memory address of our Verilog Buzzer
-0004019C:             ;     ; Show playing line
 0004019C: 00000893    ;     li      a7, ECALL_CLEAR_DISPLAY
 000401A0: 00000073    ;     ecall
+000401A4:             ; 
 000401A4: 00000517    ;     la      a0, playLine1
 000401A8: E8C50513    ; 
 000401AC: 00200893    ;     li      a7, ECALL_PRINT_STRING

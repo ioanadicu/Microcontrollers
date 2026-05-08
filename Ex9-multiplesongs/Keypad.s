@@ -1,7 +1,7 @@
 ; =============================================================================
 ; Keypad Library
 ; Maria-Ioana Dicu
-; 12 March 2026
+; 8 May 2026
 ;
 ; Provides keypad scanning, software debouncing and character buffering.
 ;
@@ -23,11 +23,6 @@
 ;   - fifo_get()
 ;       Returns the next buffered key character, or 0 if the buffer is empty.
 ;
-; Notes:
-;   - scan_keyboard is called from the timer interrupt handler.
-;   - fifo_get is called from ecall_10.
-;   - fifo_buf is not cleared when characters are read; fifo_head/fifo_tail
-;     determine whether the buffer is empty or contains unread characters.
 ; =============================================================================
 
 
@@ -103,10 +98,6 @@ fifo_tail
 ;   t6 = input-line index
 ;   a0-a6 = temporary values and FIFO argument
 ;
-; Important:
-;   - ra is saved because scan_keyboard calls fifo_put.
-;   - t0 and t6 are saved around fifo_put because fifo_put uses temporary
-;     registers which would otherwise corrupt the scan loop.
 ; =============================================================================
 
 scan_keyboard

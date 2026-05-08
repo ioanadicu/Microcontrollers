@@ -1,7 +1,7 @@
 ; =============================================================================
 ; Operating System Initialisation
 ; Maria-Ioana Dicu
-; 12 March 2026
+; 8 May 2026
 ;
 ; Performs the machine-mode setup needed before entering the user programme.
 ;
@@ -14,11 +14,6 @@
 ;   - Clear keypad debounce state and FIFO pointers.
 ;   - Enter user mode using mret.
 ;
-; Notes:
-;   - MSTATUS_MPIE is set instead of MSTATUS_MIE. mret then copies MPIE into
-;     MIE when entering user mode.
-;   - Hardware setup is done in machine mode because user mode cannot access
-;     protected I/O addresses directly.
 ; =============================================================================
 
 

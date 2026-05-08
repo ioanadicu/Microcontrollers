@@ -1,7 +1,7 @@
 ; =============================================================================
 ; Display Operations Library
 ; Maria-Ioana Dicu
-; 12 March 2026
+; 8 May 2026
 ;
 ; Provides helper routines for driving the LCD display:
 ;   - printString(pointer)
@@ -15,8 +15,6 @@
 ;   HD44780 LCD controller documentation:
 ;   https://cdn.sparkfun.com/assets/9/5/f/7/b/HD44780.pdf
 ;
-; Notes:
-;   - Delay value may still need tuning depending on hardware timing.
 ; =============================================================================
 
 
@@ -130,8 +128,7 @@ STEP_2
     li      t0, LIGHT | RW 
     sb      t0, LCD_REG_CTRL[s0]
 
-    ; Separate enable pulses
-            ; waiting_loop only uses t0 so not saving registers (intentional)  
+    ; Separate enable pulses 
     call    waiting_loop
 
     ; Repeat while bit 7 high
@@ -154,7 +151,6 @@ STEP_2
     sb      t0, LCD_REG_CTRL[s0]
 
     ; Delay to stretch pulse
-            ; waiting_loop only uses t0 so not saving registers (intentional)
     call    waiting_loop
 
     ; Disable signal 0

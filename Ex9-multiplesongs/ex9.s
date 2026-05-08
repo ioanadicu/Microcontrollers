@@ -1,6 +1,17 @@
 ; =============================================================================
-; Exercise 7: Key Debouncing and Keyboard Scanning
+; Exercise 9: Music Player
 ; Maria-Ioana Dicu
+; 8 May 2026
+;
+; This program acts as a virtual machine that interprets song data (tunes).
+; It supports:
+;   - Keypad selection for multiple songs (tune1.s, tune2.s)
+;   - Pitch and duration interpretation via a Look-Up Table (LUT)
+;   - Note separators for staccato articulation
+;   - Hardware-driven timing using OS system calls
+;   - User interruption via SW1 to return to the main menu
+;
+; Hardware Requirement: Custom Verilog User_Peripheral (Buzzer)
 ; =============================================================================
 
 ORG             0x0000_0000
@@ -46,7 +57,7 @@ user_stack_base align
 INCLUDE         UserSpaceLib.s
 
 ; =============================================================================
-; Music Player Virtual Machine (Interpreter)
+; Main Menu: Song Selection
 ; =============================================================================
 
 START
@@ -54,11 +65,14 @@ menu_start
     ; Show homescreen and wait for keypad selection
     li      a7, ECALL_CLEAR_DISPLAY
     ecall
+
     la      a0, homeLine1
     li      a7, ECALL_PRINT_STRING
     ecall
+
     li      a7, ECALL_NEXT_LINE
     ecall
+
     la      a0, homeLine2
     li      a7, ECALL_PRINT_STRING
     ecall
@@ -66,6 +80,7 @@ menu_start
 wait_for_key
     li      a7, ECALL_GET_KEY
     ecall
+
     beqz    a0, wait_for_key
 
     li      t0, '1'
@@ -82,31 +97,31 @@ select_song2
     la      s0, tune2
 
 start_play
-    li      s1, BUZZER_BASE     ; s1 = memory address of our Verilog Buzzer
-    ; Show playing line
+    li      s1, BUZZER_BASE
     li      a7, ECALL_CLEAR_DISPLAY
     ecall
+
     la      a0, playLine1
     li      a7, ECALL_PRINT_STRING
     ecall
 
 play_loop
-    ; 2. Fetch Pitch (Byte 0) and Duration (Byte 1)
+    ; Fetch Pitch (Byte 0) and Duration (Byte 1)
     lbu     t0, 0[s0]           
     
-    ; 3. Check for End of Tune (0xFF / 255)
+    ; Check for End of Tune (0xFF / 255)
     li      t3, 255
     beq     t0, t3, end_song
 
-    ; 4. Fetch Duration and convert to milliseconds
+    ; Fetch Duration and convert to milliseconds
     lbu     t2, 1[s0]           
     li      t3, 100
     mul     t2, t2, t3          
 
-    ; 5. Check for Rest (Pitch 0)
+    ; Check for Rest (Pitch 0)
     beqz    t0, play_rest
 
-    ; 6. Look up the base period from the LUT
+    ; Look up the base period from the LUT
     addi    t0, t0, -1          
     slli    t0, t0, 2           
     
@@ -114,66 +129,70 @@ play_loop
     add     t4, t4, t0          
     lw      t6, 0[t4]           
 
-    ; 7. Send to Hardware (via ECALL instead of direct store)
-    mv      a0, t6              ; Put half-period in a0
-    li      a7, ECALL_PLAY_NOTE ; Call OS to write to hardware
+    ; Send to Hardware (via ECALL instead of direct store)
+    mv      a0, t6                  ; Put half-period in a0
+    li      a7, ECALL_PLAY_NOTE
     ecall
     j       wait_duration
 
 play_rest
-    li      a0, 0               ; Period 0 = Silence
+    li      a0, 0                   ; Period 0 = Silence
     li      a7, ECALL_PLAY_NOTE
     ecall
 
 wait_duration
-    ; 8. Delay for the note's duration
-    mv      a0, t2              ; Pass duration (ms) to delay function
+    ; Delay for the note's duration
+    mv      a0, t2
     call    delay_ms
 
     ; If delay aborted, return to menu
     li      t0, 0xFF
     beq     a0, t0, menu_start
 
-    ; 9. Note Separator (Tiny gap of silence)
+    ; Note Separator (Tiny gap of silence)
     li      a0, 0
     li      a7, ECALL_PLAY_NOTE
     ecall
     
-    li      a0, 15              ; 15 ms articulation gap
+    li      a0, 15                  ; 15 ms articulation gap
     call    delay_ms
 
     li      t0, 0xFF
     beq     a0, t0, menu_start
 
-    ; 10. Move pointer to next note pair and loop
+    ; Move pointer to next note pair and loop
     addi    s0, s0, 2           
     j       play_loop
 
 end_song
-    li      a0, 0               ; Ensure buzzer is off at the end
+    li      a0, 0                   ; Ensure buzzer is off at the end
     li      a7, ECALL_PLAY_NOTE
     ecall
-    j       menu_start          ; Return to homescreen after the song ends
+    j       menu_start              ; Return to homescreen after the song ends
+
 
 ; =============================================================================
-; Helper: Delay in Milliseconds
+; Helper: Sleep with SW1 Interrupt Check
+; -----------------------------------------------------------------------------
+; Input: a0 = duration to wait (ms)
+; Output: a0 = 1 if SW1 pressed, 0 otherwise
 ; =============================================================================
-; Input: a0 = milliseconds to delay
 delay_ms
     beqz    a0, delay_done
 
-    mv      t3, a0              ; t3 = remaining ms counter (preserve across ecalls)
+    mv      t3, a0                  ; t3 = remaining ms counter (preserve across ecalls)
 
 delay_ms_loop
     la      t0, timer_ticks
-    lw      t1, [t0]            ; Snapshot the current 1 ms tick
+    lw      t1, [t0]                ; Snapshot the current 1 ms tick
 
 wait_tick
     lw      t2, [t0]
-    beq     t2, t1, wait_tick   ; Wait for the next timer interrupt
-    ; Also poll SW1 during each ms to allow stopping playback
-    li      a7, ECALL_READ_BUTTONS
+    beq     t2, t1, wait_tick       ; Wait for the next timer interrupt
+
+    li      a7, ECALL_READ_BUTTONS  ; Also poll SW1 during each ms to allow stopping playback
     ecall
+
     andi    a0, a0, BTTN1
     bnez    a0, delay_abort
 
@@ -181,23 +200,21 @@ wait_tick
     bnez    t3, delay_ms_loop
 
 delay_done
-    li      a0, 0               ; Normal return value 0
+    li      a0, 0                   ; Normal return value 0
     ret
 
 delay_abort
-    li      a0, 0               ; Silence buzzer immediately on stop
+    li      a0, 0                   ; Silence buzzer immediately on stop
     li      a7, ECALL_PLAY_NOTE
     ecall
 
-    li      a0, 0xFF            ; signal abort
+    li      a0, 0xFF                ; signal abort
     ret
 
 
 ; =============================================================================
-; Look-Up Table (LUT): 1-based Major Scale Half-Periods
+; Note LUT: Half-period values for 40MHz Clock
 ; =============================================================================
-; Calculated for 40MHz clock. Middle C (Pitch 1) is ~1046 Hz for better piezo volume.
-; Pitch 8 is exactly half the period of Pitch 1 (one octave up).
 note_lut
     defw   19111   ; Pitch 1  (C)
     defw   17026   ; Pitch 2  (D)
@@ -218,6 +235,8 @@ note_lut
     defw   4777    ; Pitch 15 (Higher C)
 
 
+; =============================================================================
+; Song data
+; =============================================================================
 INCLUDE tune1.s
-
 INCLUDE tune2.s

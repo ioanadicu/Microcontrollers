@@ -15,8 +15,6 @@
 ;   HD44780 LCD controller documentation:
 ;   https://cdn.sparkfun.com/assets/9/5/f/7/b/HD44780.pdf
 ;
-; Notes:
-;   - Delay value may still need tuning depending on hardware timing.
 ; =============================================================================
 
 
@@ -131,8 +129,7 @@ STEP_2
     sb      t0, LCD_REG_CTRL[s0]
 
     ; Separate enable pulses
-            ; waiting_loop only uses t0 so not saving registers (intentional)  
-    call    waiting_loop
+    call    waiting_loop ; waiting_loop only uses t0 so not saving registers (intentional)
 
     ; Repeat while bit 7 high
     andi    s1, s1, LCD_BUSY
@@ -154,8 +151,7 @@ STEP_2
     sb      t0, LCD_REG_CTRL[s0]
 
     ; Delay to stretch pulse
-            ; waiting_loop only uses t0 so not saving registers (intentional)
-    call    waiting_loop
+    call    waiting_loop ; waiting_loop only uses t0 so not saving registers (intentional)
 
     ; Disable signal 0
     sb      a1, LCD_REG_CTRL[s0]

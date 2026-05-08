@@ -103,10 +103,6 @@ fifo_tail
 ;   t6 = input-line index
 ;   a0-a6 = temporary values and FIFO argument
 ;
-; Important:
-;   - ra is saved because scan_keyboard calls fifo_put.
-;   - t0 and t6 are saved around fifo_put because fifo_put uses temporary
-;     registers which would otherwise corrupt the scan loop.
 ; =============================================================================
 
 scan_keyboard
