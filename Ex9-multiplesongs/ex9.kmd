@@ -24,15 +24,12 @@ KMD
 00000004:             ; ; Maria-Ioana Dicu
 00000004:             ; ; 8 May 2026
 00000004:             ; ;
-00000004:             ; ; Shared constants used by the Exercise 7 operating-system code, trap handler,
+00000004:             ; ; Shared constants used by the Exercise 9 operating-system code, trap handler,
 00000004:             ; ; timer setup, interrupt controller and memory-mapped I/O routines.
 00000004:             ; ;
 00000004:             ; ; This file contains only compile-time constants. It does not reserve memory or
 00000004:             ; ; contain executable code.
 00000004:             ; ;
-00000004:             ; ; Notes:
-00000004:             ; ;   - Hardware devices are accessed only from machine mode.
-00000004:             ; ;   - The user application should access hardware indirectly through ecalls.
 00000004:             ; ; =============================================================================
 00000004:             ; 
 00000004:             ; 
@@ -118,8 +115,7 @@ KMD
 00000004:             ; ECALL_PRINT_STRING      EQU     2
 00000004:             ; ECALL_NEXT_LINE         EQU     3
 00000004:             ; ECALL_GET_KEY           EQU     4
-00000004:             ; 
-00000004:             ; ; ECALL to read board buttons (SW1..SW3)
+00000004:             ; ECALL_PLAY_NOTE         EQU     5
 00000004:             ; ECALL_READ_BUTTONS      EQU     6
 00000004:             ; 
 00000004:             ; 
@@ -127,7 +123,6 @@ KMD
 00000004:             ; ; Custom Hardware
 00000004:             ; ; =============================================================================
 00000004:             ; BUZZER_BASE             EQU     0x0002_0000
-00000004:             ; ECALL_PLAY_NOTE         EQU     5
 00000004:             ; 
 00000004:             ; 
 00000004:             ; ; =============================================================================
@@ -136,7 +131,10 @@ KMD
 00000004:             ; SYS_CTRL_BASE           EQU     0x0001_0700
 00000004:             ; PIN_FUNC_OFFSET         EQU     0x08
 00000004:             ; 
-00000004:             ; ; Buttons (from Ex5)
+00000004:             ; 
+00000004:             ; ; =============================================================================
+00000004:             ; ; Buttons
+00000004:             ; ; =============================================================================
 00000004:             ; BUTTONS                 EQU     0x0001_0001
 00000004:             ; BTTN1                   EQU     0b0001
 00000004:             ; BTTN2                   EQU     0b0010
@@ -435,10 +433,6 @@ KMD
 00000134:             ; ;   t6 = input-line index
 00000134:             ; ;   a0-a6 = temporary values and FIFO argument
 00000134:             ; ;
-00000134:             ; ; Important:
-00000134:             ; ;   - ra is saved because scan_keyboard calls fifo_put.
-00000134:             ; ;   - t0 and t6 are saved around fifo_put because fifo_put uses temporary
-00000134:             ; ;     registers which would otherwise corrupt the scan loop.
 00000134:             ; ; =============================================================================
 00000134:             ; 
 00000134:             ; scan_keyboard
@@ -715,17 +709,14 @@ KMD
 000002F0:             ; ;   - Return to user mode using mret.
 000002F0:             ; ;
 000002F0:             ; ; Ecall services:
-000002F0:             ; ;   a7 = 0   Clear display
-000002F0:             ; ;   a7 = 1   Print character in a0 using LCD control bits in a1
-000002F0:             ; ;   a7 = 2   Print null-terminated string pointed to by a0
-000002F0:             ; ;   a7 = 3   Move cursor to second line
-000002F0:             ; ;   a7 = 4   Get next keypad character from FIFO, returns char in a0 or 0
+000002F0:             ; ;   0   Clear display
+000002F0:             ; ;   1   Print character in a0 using LCD control bits in a1
+000002F0:             ; ;   2   Print null-terminated string pointed to by a0
+000002F0:             ; ;   3   Move cursor to second line
+000002F0:             ; ;   4   Get next keypad character from FIFO, returns char in a0 or 0
+000002F0:             ; ;   5   Play note on custom Buzzer hardware
+000002F0:             ; ;   6   Read board buttons (SWs)
 000002F0:             ; ;
-000002F0:             ; ; Notes:
-000002F0:             ; ;   - ECALL returns must increment MEPC by 4.
-000002F0:             ; ;   - Interrupt returns must not increment MEPC.
-000002F0:             ; ;   - ecall_10 saves a0 back into the saved-context slot so the returned
-000002F0:             ; ;     character is not overwritten during context restore.
 000002F0:             ; ; =============================================================================
 000002F0:             ; 
 000002F0:             ; 
@@ -1318,7 +1309,7 @@ KMD
 00040134:             ; 
 00040134:             ; 
 00040134:             ; ; =============================================================================
-00040134:             ; ; Music Player Virtual Machine (Interpreter)
+00040134:             ; ; Main Menu: Song Selection
 00040134:             ; ; =============================================================================
 00040134:             ; 
 00040134:             ; START
@@ -1343,7 +1334,7 @@ KMD
 00040164:             ; wait_for_key
 00040164: 00400893    ;     li      a7, ECALL_GET_KEY
 00040168: 00000073    ;     ecall
-0004016C:             ;     
+0004016C:             ; 
 0004016C: FE050CE3    ;     beqz    a0, wait_for_key
 00040170:             ; 
 00040170: 03100293    ;     li      t0, '1'
@@ -1362,7 +1353,7 @@ KMD
 00040194: 16A40413    ; 
 00040198:             ; 
 00040198:             ; start_play
-00040198: 000204B7    ;     li      s1, BUZZER_BASE     ; s1 = memory address of our Verilog Buzzer
+00040198: 000204B7    ;     li      s1, BUZZER_BASE
 0004019C: 00000893    ;     li      a7, ECALL_CLEAR_DISPLAY
 000401A0: 00000073    ;     ecall
 000401A4:             ; 
@@ -1372,22 +1363,22 @@ KMD
 000401B0: 00000073    ;     ecall
 000401B4:             ; 
 000401B4:             ; play_loop
-000401B4:             ;     ; 2. Fetch Pitch (Byte 0) and Duration (Byte 1)
+000401B4:             ;     ; Fetch Pitch (Byte 0) and Duration (Byte 1)
 000401B4: 00044283    ;     lbu     t0, 0[s0]           
 000401B8:             ;     
-000401B8:             ;     ; 3. Check for End of Tune (0xFF / 255)
+000401B8:             ;     ; Check for End of Tune (0xFF / 255)
 000401B8: 0FF00E13    ;     li      t3, 255
 000401BC: 07C28E63    ;     beq     t0, t3, end_song
 000401C0:             ; 
-000401C0:             ;     ; 4. Fetch Duration and convert to milliseconds
+000401C0:             ;     ; Fetch Duration and convert to milliseconds
 000401C0: 00144383    ;     lbu     t2, 1[s0]           
 000401C4: 06400E13    ;     li      t3, 100
 000401C8: 03C383B3    ;     mul     t2, t2, t3          
 000401CC:             ; 
-000401CC:             ;     ; 5. Check for Rest (Pitch 0)
+000401CC:             ;     ; Check for Rest (Pitch 0)
 000401CC: 02028663    ;     beqz    t0, play_rest
 000401D0:             ; 
-000401D0:             ;     ; 6. Look up the base period from the LUT
+000401D0:             ;     ; Look up the base period from the LUT
 000401D0: FFF28293    ;     addi    t0, t0, -1          
 000401D4: 00229293    ;     slli    t0, t0, 2           
 000401D8:             ;     
@@ -1396,67 +1387,71 @@ KMD
 000401E0: 005E8EB3    ;     add     t4, t4, t0          
 000401E4: 000EAF83    ;     lw      t6, 0[t4]           
 000401E8:             ; 
-000401E8:             ;     ; 7. Send to Hardware (via ECALL instead of direct store)
-000401E8: 000F8513    ;     mv      a0, t6              ; Put half-period in a0
-000401EC: 00500893    ;     li      a7, ECALL_PLAY_NOTE ; Call OS to write to hardware
+000401E8:             ;     ; Send to Hardware (via ECALL instead of direct store)
+000401E8: 000F8513    ;     mv      a0, t6                  ; Put half-period in a0
+000401EC: 00500893    ;     li      a7, ECALL_PLAY_NOTE
 000401F0: 00000073    ;     ecall
 000401F4: 0100006F    ;     j       wait_duration
 000401F8:             ; 
 000401F8:             ; play_rest
-000401F8: 00000513    ;     li      a0, 0               ; Period 0 = Silence
+000401F8: 00000513    ;     li      a0, 0                   ; Period 0 = Silence
 000401FC: 00500893    ;     li      a7, ECALL_PLAY_NOTE
 00040200: 00000073    ;     ecall
 00040204:             ; 
 00040204:             ; wait_duration
-00040204:             ;     ; 8. Delay for the note's duration
-00040204: 00038513    ;     mv      a0, t2              ; Pass duration (ms) to delay function
+00040204:             ;     ; Delay for the note's duration
+00040204: 00038513    ;     mv      a0, t2
 00040208: 040000EF    ;     call    delay_ms
 0004020C:             ; 
 0004020C:             ;     ; If delay aborted, return to menu
 0004020C: 0FF00293    ;     li      t0, 0xFF
 00040210: F25502E3    ;     beq     a0, t0, menu_start
 00040214:             ; 
-00040214:             ;     ; 9. Note Separator (Tiny gap of silence)
+00040214:             ;     ; Note Separator (Tiny gap of silence)
 00040214: 00000513    ;     li      a0, 0
 00040218: 00500893    ;     li      a7, ECALL_PLAY_NOTE
 0004021C: 00000073    ;     ecall
 00040220:             ;     
-00040220: 00F00513    ;     li      a0, 15              ; 15 ms articulation gap
+00040220: 00F00513    ;     li      a0, 15                  ; 15 ms articulation gap
 00040224: 024000EF    ;     call    delay_ms
 00040228:             ; 
 00040228: 0FF00293    ;     li      t0, 0xFF
 0004022C: F05504E3    ;     beq     a0, t0, menu_start
 00040230:             ; 
-00040230:             ;     ; 10. Move pointer to next note pair and loop
+00040230:             ;     ; Move pointer to next note pair and loop
 00040230: 00240413    ;     addi    s0, s0, 2           
 00040234: F81FF06F    ;     j       play_loop
 00040238:             ; 
 00040238:             ; end_song
-00040238: 00000513    ;     li      a0, 0               ; Ensure buzzer is off at the end
+00040238: 00000513    ;     li      a0, 0                   ; Ensure buzzer is off at the end
 0004023C: 00500893    ;     li      a7, ECALL_PLAY_NOTE
 00040240: 00000073    ;     ecall
-00040244: EF1FF06F    ;     j       menu_start          ; Return to homescreen after the song ends
+00040244: EF1FF06F    ;     j       menu_start              ; Return to homescreen after the song ends
+00040248:             ; 
 00040248:             ; 
 00040248:             ; ; =============================================================================
-00040248:             ; ; Helper: Delay in Milliseconds
+00040248:             ; ; Helper: Sleep with SW1 Interrupt Check
+00040248:             ; ; -----------------------------------------------------------------------------
+00040248:             ; ; Input: a0 = duration to wait (ms)
+00040248:             ; ; Output: a0 = 1 if SW1 pressed, 0 otherwise
 00040248:             ; ; =============================================================================
-00040248:             ; ; Input: a0 = milliseconds to delay
 00040248:             ; delay_ms
 00040248: 02050A63    ;     beqz    a0, delay_done
 0004024C:             ; 
-0004024C: 00050E13    ;     mv      t3, a0              ; t3 = remaining ms counter (preserve across ecalls)
+0004024C: 00050E13    ;     mv      t3, a0                  ; t3 = remaining ms counter (preserve across ecalls)
 00040250:             ; 
 00040250:             ; delay_ms_loop
 00040250: 00000297    ;     la      t0, timer_ticks
 00040254: DBC28293    ; 
-00040258: 0002A303    ;     lw      t1, [t0]            ; Snapshot the current 1 ms tick
+00040258: 0002A303    ;     lw      t1, [t0]                ; Snapshot the current 1 ms tick
 0004025C:             ; 
 0004025C:             ; wait_tick
 0004025C: 0002A383    ;     lw      t2, [t0]
-00040260: FE638EE3    ;     beq     t2, t1, wait_tick   ; Wait for the next timer interrupt
-00040264:             ;     ; Also poll SW1 during each ms to allow stopping playback
-00040264: 00600893    ;     li      a7, ECALL_READ_BUTTONS
+00040260: FE638EE3    ;     beq     t2, t1, wait_tick       ; Wait for the next timer interrupt
+00040264:             ; 
+00040264: 00600893    ;     li      a7, ECALL_READ_BUTTONS  ; Also poll SW1 during each ms to allow stopping playback
 00040268: 00000073    ;     ecall
+0004026C:             ; 
 0004026C: 00157513    ;     andi    a0, a0, BTTN1
 00040270: 00051A63    ;     bnez    a0, delay_abort
 00040274:             ; 
@@ -1464,23 +1459,21 @@ KMD
 00040278: FC0E1CE3    ;     bnez    t3, delay_ms_loop
 0004027C:             ; 
 0004027C:             ; delay_done
-0004027C: 00000513    ;     li      a0, 0               ; Normal return value 0
+0004027C: 00000513    ;     li      a0, 0                   ; Normal return value 0
 00040280: 00008067    ;     ret
 00040284:             ; 
 00040284:             ; delay_abort
-00040284: 00000513    ;     li      a0, 0               ; Silence buzzer immediately on stop
+00040284: 00000513    ;     li      a0, 0                   ; Silence buzzer immediately on stop
 00040288: 00500893    ;     li      a7, ECALL_PLAY_NOTE
 0004028C: 00000073    ;     ecall
 00040290:             ; 
-00040290: 0FF00513    ;     li      a0, 0xFF            ; signal abort
+00040290: 0FF00513    ;     li      a0, 0xFF                ; signal abort
 00040294: 00008067    ;     ret
 00040298:             ; 
 00040298:             ; 
 00040298:             ; ; =============================================================================
-00040298:             ; ; Look-Up Table (LUT): 1-based Major Scale Half-Periods
+00040298:             ; ; Note LUT: Half-period values for 40MHz Clock
 00040298:             ; ; =============================================================================
-00040298:             ; ; Calculated for 40MHz clock. Middle C (Pitch 1) is ~1046 Hz for better piezo volume.
-00040298:             ; ; Pitch 8 is exactly half the period of Pitch 1 (one octave up).
 00040298:             ; note_lut
 00040298: 00004AA7    ;     defw   19111   ; Pitch 1  (C)
 0004029C: 00004282    ;     defw   17026   ; Pitch 2  (D)
@@ -1501,6 +1494,9 @@ KMD
 000402D0: 000012A9    ;     defw   4777    ; Pitch 15 (Higher C)
 000402D4:             ; 
 000402D4:             ; 
+000402D4:             ; ; =============================================================================
+000402D4:             ; ; Song data
+000402D4:             ; ; =============================================================================
 000402D4:             ; INCLUDE tune1.s
 000402D4:             ; tune1           
 000402D4: 08 07       ;     defb      8, 7
@@ -1525,7 +1521,6 @@ KMD
 000402F6: 08 10       ;     defb      8, 16
 000402F8:             ; 
 000402F8: FF 00       ;     defb    255, 0    ; 0xFF (255) means End of File!
-000402FA:             ; 
 000402FA:             ; INCLUDE tune2.s
 000402FA:             ; tune2
 000402FA: 08 02       ;     defb     8, 2
@@ -1644,9 +1639,9 @@ Symbol Table: Labels
 : ECALL_PRINT_STRING                00000002  Value
 : ECALL_NEXT_LINE                   00000003  Value
 : ECALL_GET_KEY                     00000004  Value
+: ECALL_PLAY_NOTE                   00000005  Value
 : ECALL_READ_BUTTONS                00000006  Value
 : BUZZER_BASE                       00020000  Value
-: ECALL_PLAY_NOTE                   00000005  Value
 : SYS_CTRL_BASE                     00010700  Value
 : PIN_FUNC_OFFSET                   00000008  Value
 : BUTTONS                           00010001  Value
