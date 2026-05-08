@@ -14,7 +14,7 @@
 ;
 ; Ecall services:
 ;   a7 = 0   Clear display
-;   a7 = 1   Print character in a0
+;   a7 = 1   Print character in a0 using LCD control bits in a1
 ;   a7 = 2   Print null-terminated string pointed to by a0
 ;   a7 = 3   Move cursor to second line
 ;   a7 = 4   Get next keypad character from FIFO, returns char in a0 or 0
@@ -22,7 +22,7 @@
 ; Notes:
 ;   - ECALL returns must increment MEPC by 4.
 ;   - Interrupt returns must not increment MEPC.
-;   - ecall_4 saves a0 back into the saved-context slot so the returned
+;   - ecall_10 saves a0 back into the saved-context slot so the returned
 ;     character is not overwritten during context restore.
 ; =============================================================================
 
@@ -67,7 +67,7 @@ mhandler
     ; -------------------------------------------------------------------------
 
     csrr    t0, MCAUSE
-    bgez    t0, handle_trap        ; If top bit is 0, this is a synchronous trap
+    bgez    t0, handle_trap        ; Interrupts have the top bit set
 
     ; -------------------------------------------------------------------------
     ; Interrupt path
@@ -90,9 +90,7 @@ handle_trap
     slli    t0, t0, 2              ; Word offset into table
     add     t1, t1, t0
     lw      t1, [t1]               ; Load handler address
-    jalr    ra, t1, 0              ; Call selected trap handler
-
-    j       interrupt_exit         ; Common restore/mret after handler returns
+    jr      t1
 
 
 ; =============================================================================
@@ -103,6 +101,7 @@ interrupt_11
     ; -------------------------------------------------------------------------
     ; Check whether the timer caused this interrupt
     ; -------------------------------------------------------------------------
+.
 
     li      t0, INTR_CTRL
     lw      t1, INTR_RQ[t0]
@@ -197,23 +196,14 @@ trap_handler_7      j   .          ; Store access fault
 ; =============================================================================
 
 trap_handler_8
-    ; Return after the ecall instruction
-    csrr    t0, MEPC
-    addi    t0, t0, 4
-    csrw    MEPC, t0
-
-    ; Reject unknown ecall numbers
     li      t0, ecall_max
-    bgeu    a7, t0, ecall_range
+    bgeu    a7, t0, ecall_range    ; Reject unknown ecall numbers
 
-    ; Dispatch through ecall table
     la      t0, ecall_jump
     slli    t1, a7, 2              ; Word offset = ecall number * 4
     add     t0, t0, t1
     lw      t0, [t0]               ; Load service routine address
-    jalr    ra, t0, 0              ; Call selected ecall routine
-
-    ret                            ; Return to handle_trap
+    jr      t0
 
 
 trap_handler_9      j   .          ; Environment call from S-mode
@@ -235,43 +225,59 @@ ecall_jump
     defw    ecall_2                ; Print string
     defw    ecall_3                ; Move cursor to second line
     defw    ecall_4                ; Get next keypad character
+    defw    ecall_5                ; Play note on custom Buzzer hardware
 ecall_jump_end
-
 
 ; =============================================================================
 ; Ecall service routines
 ; =============================================================================
 
 ecall_range
-    ret                            ; Invalid ecall number, do nothing
+    j       .                      ; Invalid ecall number
 
 
 ecall_0
     li      a0, CLEAR_DIS
     li      a1, LIGHT
     call    lcdSendCommand
-    ret
+    j       ecall_exit
 
 
 ecall_1
-    li      a1, LIGHT | RS         ; Character data, not LCD command
+    li      a1, LIGHT | RS ; new change!!
     call    lcdSendCommand
-    ret
+    j       ecall_exit
 
 
 ecall_2
     call    printString
-    ret
+    j       ecall_exit
 
 
 ecall_3
     li      a0, SHIFT_NEXT
     li      a1, LIGHT
     call    lcdSendCommand
-    ret
-
+    j       ecall_exit
 
 ecall_4
     call    fifo_get
     sw      a0, 32[sp]             ; Preserve return value through restore
-    ret
+    j       ecall_exit
+
+ecall_5
+    li      t0, BUZZER_BASE
+    sw      a0, 0[t0]              ; Write the requested period to the hardware
+    j       ecall_exit
+    
+
+; =============================================================================
+; Ecall return
+; =============================================================================
+
+ecall_exit
+    csrr    t0, MEPC
+    addi    t0, t0, 4              ; Return after the ecall instruction
+    csrw    MEPC, t0
+
+    j       interrupt_exit

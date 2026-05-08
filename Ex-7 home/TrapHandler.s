@@ -17,7 +17,7 @@
 ;   a7 = 1   Print character in a0 using LCD control bits in a1
 ;   a7 = 2   Print null-terminated string pointed to by a0
 ;   a7 = 3   Move cursor to second line
-;   a7 = 10  Get next keypad character from FIFO, returns char in a0 or 0
+;   a7 = 4   Get next keypad character from FIFO, returns char in a0 or 0
 ;
 ; Notes:
 ;   - ECALL returns must increment MEPC by 4.

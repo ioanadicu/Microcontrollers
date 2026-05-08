@@ -686,7 +686,7 @@ KMD
 000002E0:             ; ;   a7 = 1   Print character in a0 using LCD control bits in a1
 000002E0:             ; ;   a7 = 2   Print null-terminated string pointed to by a0
 000002E0:             ; ;   a7 = 3   Move cursor to second line
-000002E0:             ; ;   a7 = 10  Get next keypad character from FIFO, returns char in a0 or 0
+000002E0:             ; ;   a7 = 4   Get next keypad character from FIFO, returns char in a0 or 0
 000002E0:             ; ;
 000002E0:             ; ; Notes:
 000002E0:             ; ;   - ECALL returns must increment MEPC by 4.
