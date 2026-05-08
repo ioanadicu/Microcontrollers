@@ -1,7 +1,7 @@
 ; =============================================================================
 ; Keypad Library
 ; Maria-Ioana Dicu
-; 1 May 2026
+; 12 March 2026
 ;
 ; Provides keypad scanning, software debouncing and character buffering.
 ;
@@ -219,7 +219,7 @@ scan_col_loop
     lbu     a0, [a6]                ; a0 = ASCII character for this key
 
     li      a2, ' '
-    beq     a0, a2, next_key        ; Ignore blank entries
+    beq     a0, a2, next_key        ; Ignore blank/undefined entries
 
 
     ; -------------------------------------------------------------------------

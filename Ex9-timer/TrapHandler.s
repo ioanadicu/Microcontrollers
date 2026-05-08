@@ -1,7 +1,7 @@
 ; =============================================================================
 ; Trap and Interrupt Handler
 ; Maria-Ioana Dicu
-; 1 May 2026
+; 12 March 2026
 ;
 ; Handles traps and interrupts for Exercise 7.
 ;
@@ -13,12 +13,17 @@
 ;   - Return to user mode using mret.
 ;
 ; Ecall services:
-;   0   Clear display
-;   1   Print character in a0 using LCD control bits in a1
-;   2   Print null-terminated string pointed to by a0
-;   3   Move cursor to second line
-;   4   Get next keypad character from FIFO, returns char in a0 or 0
+;   a7 = 0   Clear display
+;   a7 = 1   Print character in a0 using LCD control bits in a1
+;   a7 = 2   Print null-terminated string pointed to by a0
+;   a7 = 3   Move cursor to second line
+;   a7 = 4   Get next keypad character from FIFO, returns char in a0 or 0
 ;
+; Notes:
+;   - ECALL returns must increment MEPC by 4.
+;   - Interrupt returns must not increment MEPC.
+;   - ecall_10 saves a0 back into the saved-context slot so the returned
+;     character is not overwritten during context restore.
 ; =============================================================================
 
 
@@ -118,6 +123,11 @@ interrupt_11
     ; -------------------------------------------------------------------------
 
     call    scan_keyboard
+
+    la      t0, timer_ticks
+    lw      t1, [t0]
+    addi    t1, t1, 1
+    sw      t1, [t0]
 
     j       interrupt_exit
 
@@ -219,6 +229,7 @@ ecall_jump
     defw    ecall_2                ; Print string
     defw    ecall_3                ; Move cursor to second line
     defw    ecall_4                ; Get next keypad character
+    defw    ecall_5                ; Play note on custom Buzzer hardware
 ecall_jump_end
 
 ; =============================================================================
@@ -258,6 +269,11 @@ ecall_4
     sw      a0, 32[sp]             ; Preserve return value through restore
     j       ecall_exit
 
+ecall_5
+    li      t0, BUZZER_BASE
+    sw      a0, 0[t0]              ; Write the requested period to the hardware
+    j       ecall_exit
+    
 
 ; =============================================================================
 ; Ecall return

@@ -1,6 +1,9 @@
 ; =============================================================================
 ; Exercise 7: Key Debouncing and Keyboard Scanning
 ; Maria-Ioana Dicu
+;
+; Main file for Exercise 7.
+;
 ; =============================================================================
 
 ORG             0x0000_0000
@@ -58,7 +61,6 @@ main_loop
 
     beqz    a0, main_loop
 
-    ; li      a1, LIGHT | RS
     li      a7, ECALL_PRINT_CHAR
     ecall
 

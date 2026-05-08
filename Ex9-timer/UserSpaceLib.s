@@ -1,7 +1,7 @@
 ; =============================================================================
 ; User Space Screen Routines
 ; Maria-Ioana Dicu
-; 1 May 2026
+; 12 March 2026
 ;
 ; This file contains helper routines used to print common screens and values
 ; through the display-related ecalls.
@@ -59,6 +59,7 @@ printDec
 
     bnez    s0, decLoop
     li      a0, '0'
+    ;li      a1, LIGHT | RS
 
     li      a7, ECALL_PRINT_CHAR
     ecall 
@@ -89,6 +90,7 @@ decLoop
 printLoop
     lw      a0, 0[sp]
     addi    sp, sp, 4
+    ;li      a1, LIGHT | RS
 
     li      a7, ECALL_PRINT_CHAR
     ecall 

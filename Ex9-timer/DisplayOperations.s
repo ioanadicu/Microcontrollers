@@ -1,7 +1,7 @@
 ; =============================================================================
 ; Display Operations Library
 ; Maria-Ioana Dicu
-; 1 May 2026
+; 12 March 2026
 ;
 ; Provides helper routines for driving the LCD display:
 ;   - printString(pointer)
@@ -179,8 +179,15 @@ STEP_2
 ; =============================================================================
 
 waiting_loop
+    subi    sp, sp, 4
+    sw      t0, 0[sp]
+
     li      t0, DELAY
 loop_point
     subi    t0, t0, 0b1
     bnez    t0, loop_point
+
+    lw      t0, 0[sp]
+    addi    sp, sp, 4
+    
     jr      ra

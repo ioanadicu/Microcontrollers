@@ -1,7 +1,7 @@
 ; =============================================================================
 ; Operating System Initialisation
 ; Maria-Ioana Dicu
-; 1 May 2026
+; 12 March 2026
 ;
 ; Performs the machine-mode setup needed before entering the user programme.
 ;
@@ -14,6 +14,11 @@
 ;   - Clear keypad debounce state and FIFO pointers.
 ;   - Enter user mode using mret.
 ;
+; Notes:
+;   - MSTATUS_MPIE is set instead of MSTATUS_MIE. mret then copies MPIE into
+;     MIE when entering user mode.
+;   - Hardware setup is done in machine mode because user mode cannot access
+;     protected I/O addresses directly.
 ; =============================================================================
 
 
@@ -50,6 +55,8 @@ initialisation
     li      t0, bit31
     sw      t0, TIME_REG_CMD[t1]   ; Clear terminal-count status bit
 
+    la      t0, timer_ticks
+    sw      zero, [t0]             ; Reset shared 1 ms tick counter
 
     ; -------------------------------------------------------------------------
     ; Interrupt controller setup
@@ -121,6 +128,14 @@ clear_state_loop
     sw      zero, [t0]
 
 
+    ; -------------------------------------------------------------------------
+    ; Route Buzzer Pins (Bits 6 & 7) to User Peripheral
+    ; -------------------------------------------------------------------------
+    li      t0, SYS_CTRL_BASE
+    li      t1, 0xC0               ; 0xC0 is binary 1100_0000 (Bits 7 and 6)
+    sw      t1, PIN_FUNC_OFFSET[t0]
+
+    
     ; -------------------------------------------------------------------------
     ; Enter user mode
     ; -------------------------------------------------------------------------

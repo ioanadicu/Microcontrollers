@@ -1,0 +1,36 @@
+KMD
+00000000:             ; ; =============================================================================
+00000000:             ; ; SCREAM TEST
+00000000:             ; ; If the hardware works, this will make a continuous, loud tone.
+00000000:             ; ; =============================================================================
+00000000:             ; 
+00000000:             ; ORG             0x0000_0000
+00000000:             ; 
+00000000:             ; ; --- Hardware Addresses ---
+00000000:             ; SYS_CTRL_BASE   EQU     0x0001_0700
+00000000:             ; PIN_FUNC_OFFSET EQU     0x08
+00000000:             ; BUZZER_BASE     EQU     0x0002_0000
+00000000:             ; 
+00000000:             ; START
+00000000:             ;     ; 1. Route the physical pins (Bits 6 & 7) to our custom Verilog
+00000000: 000102B7    ;     li      t0, SYS_CTRL_BASE
+00000004: 70028293    ; 
+00000008: 0C000313    ;     li      t1, 0xC0               ; 0xC0 = 1100_0000 in binary
+0000000C: 0062A423    ;     sw      t1, PIN_FUNC_OFFSET[t0]
+00000010:             ; 
+00000010:             ;     ; 2. Turn the buzzer ON permanently with a ~1.3 kHz tone
+00000010: 000202B7    ;     li      t0, BUZZER_BASE
+00000014: 00004337    ;     li      t1, 15000              ; Half-period for a clear, audible squeal
+00000018: A9830313    ; 
+0000001C: 0062A023    ;     sw      t1, 0[t0]
+00000020:             ; 
+00000020:             ;     ; 3. Freeze 
+00000020:             ; freeze
+00000020: 0000006F    ;     j       freeze
+
+Symbol Table: Labels
+: SYS_CTRL_BASE                     00010700  Value
+: PIN_FUNC_OFFSET                   00000008  Value
+: BUZZER_BASE                       00020000  Value
+: START                             00000000  Label
+: freeze                            00000020  Label
