@@ -39,9 +39,6 @@ user_code
 ; User strings / stack
 ; =============================================================================
 
-timer_ticks     defw    0
-                align
-
 homeLine1       defb    "Pick a song:\0"
                 align
 
@@ -180,24 +177,30 @@ end_song
 delay_ms
     beqz    a0, delay_done
 
-    mv      t3, a0                  ; t3 = remaining ms counter (preserve across ecalls)
+    mv      t3, a0                  ; t3 = requested duration (ms)
 
-delay_ms_loop
-    la      t0, timer_ticks
-    lw      t1, [t0]                ; Snapshot the current 1 ms tick
-
-wait_tick
-    lw      t2, [t0]
-    beq     t2, t1, wait_tick       ; Wait for the next timer interrupt
-
-    li      a7, ECALL_READ_BUTTONS  ; Also poll SW1 during each ms to allow stopping playback
+    li      a7, ECALL_GET_TIME
     ecall
 
+    mv      t0, a0                  ; t0 = start tick
+
+delay_ms_loop
+    li      a7, ECALL_GET_TIME
+    ecall
+
+    mv      t1, a0                  ; t1 = current tick
+
+    li      a7, ECALL_READ_BUTTONS
+    ecall
+    
     andi    a0, a0, BTTN1
     bnez    a0, delay_abort
 
-    subi    t3, t3, 1
-    bnez    t3, delay_ms_loop
+    ; Compute elapsed = current - start (unsigned) and compare
+    sub     t2, t1, t0
+    bgeu    t2, t3, delay_done
+
+    j       delay_ms_loop
 
 delay_done
     li      a0, 0                   ; Normal return value 0

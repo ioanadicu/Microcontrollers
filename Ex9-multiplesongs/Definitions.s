@@ -96,6 +96,7 @@ ECALL_NEXT_LINE         EQU     3
 ECALL_GET_KEY           EQU     4
 ECALL_PLAY_NOTE         EQU     5
 ECALL_READ_BUTTONS      EQU     6
+ECALL_GET_TIME          EQU     7
 
 
 ; =============================================================================

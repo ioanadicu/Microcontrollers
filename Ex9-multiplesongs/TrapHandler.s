@@ -232,6 +232,7 @@ ecall_jump
     defw    ecall_4                ; Get next keypad character
     defw    ecall_5                ; Play note on custom Buzzer hardware
     defw    ecall_6                ; Read board buttons (SWs)
+    defw    ecall_7                ; Get current system tick (ECALL_GET_TIME)
 ecall_jump_end
 
 ; =============================================================================
@@ -281,6 +282,12 @@ ecall_6
     lb      a0, [t0]
     sw      a0, 32[sp]             ; Preserve return value through restore
     j       ecall_exit
+
+ecall_7
+    la      t0, timer_ticks
+    lw      a0, [t0]
+    sw      a0, 32[sp]             ; Preserve return value through restore
+    j       ecall_exit
     
 
 ; =============================================================================
@@ -293,3 +300,12 @@ ecall_exit
     csrw    MEPC, t0
 
     j       interrupt_exit
+
+
+; =============================================================================
+; OS-local data
+; =============================================================================
+
+timer_ticks
+    defw    0
+    align

@@ -125,8 +125,6 @@ KMD
 00000004:             ; ;   HD44780 LCD controller documentation:
 00000004:             ; ;   https://cdn.sparkfun.com/assets/9/5/f/7/b/HD44780.pdf
 00000004:             ; ;
-00000004:             ; ; Notes:
-00000004:             ; ;   - Delay value may still need tuning depending on hardware timing.
 00000004:             ; ; =============================================================================
 00000004:             ; 
 00000004:             ; 
@@ -242,8 +240,7 @@ KMD
 00000080: 005400A3    ;     sb      t0, LCD_REG_CTRL[s0]
 00000084:             ; 
 00000084:             ;     ; Separate enable pulses
-00000084:             ;             ; waiting_loop only uses t0 so not saving registers (intentional)  
-00000084: 038000EF    ;     call    waiting_loop
+00000084: 038000EF    ;     call    waiting_loop ; waiting_loop only uses t0 so not saving registers (intentional)
 00000088:             ; 
 00000088:             ;     ; Repeat while bit 7 high
 00000088: 0804F493    ;     andi    s1, s1, LCD_BUSY
@@ -265,8 +262,7 @@ KMD
 0000009C: 005400A3    ;     sb      t0, LCD_REG_CTRL[s0]
 000000A0:             ; 
 000000A0:             ;     ; Delay to stretch pulse
-000000A0:             ;             ; waiting_loop only uses t0 so not saving registers (intentional)
-000000A0: 01C000EF    ;     call    waiting_loop
+000000A0: 01C000EF    ;     call    waiting_loop ; waiting_loop only uses t0 so not saving registers (intentional)
 000000A4:             ; 
 000000A4:             ;     ; Disable signal 0
 000000A4: 00B400A3    ;     sb      a1, LCD_REG_CTRL[s0]
@@ -402,10 +398,6 @@ KMD
 00000124:             ; ;   t6 = input-line index
 00000124:             ; ;   a0-a6 = temporary values and FIFO argument
 00000124:             ; ;
-00000124:             ; ; Important:
-00000124:             ; ;   - ra is saved because scan_keyboard calls fifo_put.
-00000124:             ; ;   - t0 and t6 are saved around fifo_put because fifo_put uses temporary
-00000124:             ; ;     registers which would otherwise corrupt the scan loop.
 00000124:             ; ; =============================================================================
 00000124:             ; 
 00000124:             ; scan_keyboard
@@ -910,7 +902,7 @@ KMD
 00000490:             ; 
 00000490:             ; 
 00000490:             ; ecall_1
-00000490: 00A00593    ;     li      a1, LIGHT | RS ; new change!!
+00000490: 00A00593    ;     li      a1, LIGHT | RS
 00000494: BB9FF0EF    ;     call    lcdSendCommand
 00000498: 0280006F    ;     j       ecall_exit
 0000049C:             ; 
