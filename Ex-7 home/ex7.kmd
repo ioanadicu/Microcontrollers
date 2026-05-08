@@ -2,6 +2,9 @@ KMD
 00000000:             ; ; =============================================================================
 00000000:             ; ; Exercise 7: Key Debouncing and Keyboard Scanning
 00000000:             ; ; Maria-Ioana Dicu
+00000000:             ; ;
+00000000:             ; ; Main file for Exercise 7.
+00000000:             ; ;
 00000000:             ; ; =============================================================================
 00000000:             ; 
 00000000:             ; ORG             0x0000_0000
@@ -11,7 +14,7 @@ KMD
 00000004:             ; ; =============================================================================
 00000004:             ; ; Definitions
 00000004:             ; ; Maria-Ioana Dicu
-00000004:             ; ; 12 March 2026
+00000004:             ; ; 1 May 2026
 00000004:             ; ;
 00000004:             ; ; Shared constants used by the Exercise 7 operating-system code, trap handler,
 00000004:             ; ; timer setup, interrupt controller and memory-mapped I/O routines.
@@ -19,9 +22,6 @@ KMD
 00000004:             ; ; This file contains only compile-time constants. It does not reserve memory or
 00000004:             ; ; contain executable code.
 00000004:             ; ;
-00000004:             ; ; Notes:
-00000004:             ; ;   - Hardware devices are accessed only from machine mode.
-00000004:             ; ;   - The user application should access hardware indirectly through ecalls.
 00000004:             ; ; =============================================================================
 00000004:             ; 
 00000004:             ; 
@@ -111,7 +111,7 @@ KMD
 00000004:             ; ; =============================================================================
 00000004:             ; ; Display Operations Library
 00000004:             ; ; Maria-Ioana Dicu
-00000004:             ; ; 12 March 2026
+00000004:             ; ; 1 May 2026
 00000004:             ; ;
 00000004:             ; ; Provides helper routines for driving the LCD display:
 00000004:             ; ;   - printString(pointer)
@@ -300,7 +300,7 @@ KMD
 000000CC:             ; ; =============================================================================
 000000CC:             ; ; Keypad Library
 000000CC:             ; ; Maria-Ioana Dicu
-000000CC:             ; ; 12 March 2026
+000000CC:             ; ; 1 May 2026
 000000CC:             ; ;
 000000CC:             ; ; Provides keypad scanning, software debouncing and character buffering.
 000000CC:             ; ;
@@ -524,7 +524,7 @@ KMD
 000001F0: 00084503    ;     lbu     a0, [a6]                ; a0 = ASCII character for this key
 000001F4:             ; 
 000001F4: 02000613    ;     li      a2, ' '
-000001F8: 02C50863    ;     beq     a0, a2, next_key        ; Ignore blank/undefined entries
+000001F8: 02C50863    ;     beq     a0, a2, next_key        ; Ignore blank entries
 000001FC:             ; 
 000001FC:             ; 
 000001FC:             ;     ; -------------------------------------------------------------------------
@@ -670,7 +670,7 @@ KMD
 000002E0:             ; ; =============================================================================
 000002E0:             ; ; Trap and Interrupt Handler
 000002E0:             ; ; Maria-Ioana Dicu
-000002E0:             ; ; 12 March 2026
+000002E0:             ; ; 1 May 2026
 000002E0:             ; ;
 000002E0:             ; ; Handles traps and interrupts for Exercise 7.
 000002E0:             ; ;
@@ -682,17 +682,12 @@ KMD
 000002E0:             ; ;   - Return to user mode using mret.
 000002E0:             ; ;
 000002E0:             ; ; Ecall services:
-000002E0:             ; ;   a7 = 0   Clear display
-000002E0:             ; ;   a7 = 1   Print character in a0 using LCD control bits in a1
-000002E0:             ; ;   a7 = 2   Print null-terminated string pointed to by a0
-000002E0:             ; ;   a7 = 3   Move cursor to second line
-000002E0:             ; ;   a7 = 4   Get next keypad character from FIFO, returns char in a0 or 0
+000002E0:             ; ;   0   Clear display
+000002E0:             ; ;   1   Print character in a0 using LCD control bits in a1
+000002E0:             ; ;   2   Print null-terminated string pointed to by a0
+000002E0:             ; ;   3   Move cursor to second line
+000002E0:             ; ;   4   Get next keypad character from FIFO, returns char in a0 or 0
 000002E0:             ; ;
-000002E0:             ; ; Notes:
-000002E0:             ; ;   - ECALL returns must increment MEPC by 4.
-000002E0:             ; ;   - Interrupt returns must not increment MEPC.
-000002E0:             ; ;   - ecall_10 saves a0 back into the saved-context slot so the returned
-000002E0:             ; ;     character is not overwritten during context restore.
 000002E0:             ; ; =============================================================================
 000002E0:             ; 
 000002E0:             ; 
@@ -951,7 +946,7 @@ KMD
 000004D0:             ; ; =============================================================================
 000004D0:             ; ; Operating System Initialisation
 000004D0:             ; ; Maria-Ioana Dicu
-000004D0:             ; ; 12 March 2026
+000004D0:             ; ; 1 May 2026
 000004D0:             ; ;
 000004D0:             ; ; Performs the machine-mode setup needed before entering the user programme.
 000004D0:             ; ;
@@ -964,11 +959,6 @@ KMD
 000004D0:             ; ;   - Clear keypad debounce state and FIFO pointers.
 000004D0:             ; ;   - Enter user mode using mret.
 000004D0:             ; ;
-000004D0:             ; ; Notes:
-000004D0:             ; ;   - MSTATUS_MPIE is set instead of MSTATUS_MIE. mret then copies MPIE into
-000004D0:             ; ;     MIE when entering user mode.
-000004D0:             ; ;   - Hardware setup is done in machine mode because user mode cannot access
-000004D0:             ; ;     protected I/O addresses directly.
 000004D0:             ; ; =============================================================================
 000004D0:             ; 
 000004D0:             ; 
@@ -1140,7 +1130,7 @@ KMD
 0004009C:             ; ; =============================================================================
 0004009C:             ; ; User Space Screen Routines
 0004009C:             ; ; Maria-Ioana Dicu
-0004009C:             ; ; 12 March 2026
+0004009C:             ; ; 1 May 2026
 0004009C:             ; ;
 0004009C:             ; ; This file contains helper routines used to print common screens and values
 0004009C:             ; ; through the display-related ecalls.
@@ -1198,7 +1188,6 @@ KMD
 000400B4:             ; 
 000400B4: 00041A63    ;     bnez    s0, decLoop
 000400B8: 03000513    ;     li      a0, '0'
-000400BC:             ;     ;li      a1, LIGHT | RS
 000400BC:             ; 
 000400BC: 00100893    ;     li      a7, ECALL_PRINT_CHAR
 000400C0: 00000073    ;     ecall 
@@ -1229,7 +1218,6 @@ KMD
 000400E8:             ; printLoop
 000400E8: 00012503    ;     lw      a0, 0[sp]
 000400EC: 00410113    ;     addi    sp, sp, 4
-000400F0:             ;     ;li      a1, LIGHT | RS
 000400F0:             ; 
 000400F0: 00100893    ;     li      a7, ECALL_PRINT_CHAR
 000400F4: 00000073    ;     ecall 
@@ -1268,7 +1256,6 @@ KMD
 0004013C:             ; 
 0004013C: FE050CE3    ;     beqz    a0, main_loop
 00040140:             ; 
-00040140:             ;     ; li      a1, LIGHT | RS
 00040140: 00100893    ;     li      a7, ECALL_PRINT_CHAR
 00040144: 00000073    ;     ecall
 00040148:             ; 

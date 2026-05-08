@@ -830,7 +830,7 @@ KMD
 00000394: DA1FF0EF    ;     call    scan_keyboard
 00000398:             ; 
 00000398: 00040297    ;     la      t0, timer_ticks
-0000039C: C8828293    ; 
+0000039C: C7428293    ; 
 000003A0: 0002A303    ;     lw      t1, [t0]
 000003A4: 00130313    ;     addi    t1, t1, 1
 000003A8: 0062A023    ;     sw      t1, [t0]
@@ -1065,7 +1065,7 @@ KMD
 0000056C: 00532823    ;     sw      t0, TIME_REG_CMD[t1]   ; Clear terminal-count status bit
 00000570:             ; 
 00000570: 00040297    ;     la      t0, timer_ticks
-00000574: AB028293    ; 
+00000574: A9C28293    ; 
 00000578: 0002A023    ;     sw      zero, [t0]             ; Reset shared 1 ms tick counter
 0000057C:             ; 
 0000057C:             ;     ; -------------------------------------------------------------------------
@@ -1160,7 +1160,7 @@ KMD
 00000624:             ;     ; -------------------------------------------------------------------------
 00000624:             ; 
 00000624: 00040117    ;     la      sp, user_stack_base
-00000628: AAC10113    ; 
+00000628: A9810113    ; 
 0000062C: 00040297    ;     la      t0, user_code
 00000630: 9D428293    ; 
 00000634: 34129073    ;     csrw    MEPC, t0
@@ -1186,444 +1186,437 @@ KMD
 00040000:             ; 
 00040000:             ; user_code
 00040000: 00000117    ;     la      sp, user_stack_base
-00040004: 0D010113    ; 
-00040008: 1400006F    ;     j       START
+00040004: 0BC10113    ; 
+00040008: 12C0006F    ;     j       START
 0004000C:             ; 
 0004000C:             ; 
 0004000C:             ; ; =============================================================================
 0004000C:             ; ; User strings / stack
 0004000C:             ; ; =============================================================================
 0004000C:             ; 
-0004000C: 50 6C 61 79 ; msg1            defb    "Playing tune2...\0"
-00040010: 69 6E 67 20 ; 
-00040014: 74 75 6E 65 ; 
-00040018: 32 2E 2E 2E ; 
+0004000C: 00000000    ; timer_ticks     defw    0
+00040010:             ;                 align
+00040010:             ; 
+00040010: 50 69 63 6B ; homeLine1       defb    "Pick a song:\0"
+00040014: 20 61 20 73 ; 
+00040018: 6F 6E 67 3A ; 
 0004001C: 00          ; 
 00040020:             ;                 align
 00040020:             ; 
-00040020: 00000000    ; timer_ticks     defw    0
-00040024:             ;                 align
-00040024:             ; 
-00040024: 50 69 63 6B ; homeLine1       defb    "Pick a song:\0"
-00040028: 20 61 20 73 ; 
-0004002C: 6F 6E 67 3A ; 
-00040030: 00          ; 
-00040034:             ;                 align
-00040034:             ; 
-00040034: 31 3A 54 75 ; homeLine2       defb    "1:Tune1 2:Tune2\0"
-00040038: 6E 65 31 20 ; 
-0004003C: 32 3A 54 75 ; 
-00040040: 6E 65 32 00 ; 
-00040044:             ;                 align
-00040044:             ; 
-00040044: 50 6C 61 79 ; playLine1       defb    "Playing...\0"
-00040048: 69 6E 67 2E ; 
-0004004C: 2E 2E 00    ; 
-00040050:             ;                 align
-00040050:             ; 
-00040050:             ; user_stack      defs    128
-000400D0:             ; user_stack_base align
-000400D0:             ; 
-000400D0:             ; INCLUDE         UserSpaceLib.s
-000400D0:             ; ; =============================================================================
-000400D0:             ; ; User Space Screen Routines
-000400D0:             ; ; Maria-Ioana Dicu
-000400D0:             ; ; 12 March 2026
-000400D0:             ; ;
-000400D0:             ; ; This file contains helper routines used to print common screens and values
-000400D0:             ; ; through the display-related ecalls.
-000400D0:             ; ;
-000400D0:             ; ; The main purpose of these functions is to keep the main program shorter and
-000400D0:             ; ; avoid repeating the same display-printing sequences multiple times.
-000400D0:             ; ;
-000400D0:             ; ; Functions provided:
-000400D0:             ; ;   - printDec(value)
-000400D0:             ; ;       Prints an unsigned decimal number digit by digit.
-000400D0:             ; ;
-000400D0:             ; ;   - displayTime()
-000400D0:             ; ;       Prints the current timer values using the display ecalls.
-000400D0:             ; ;
-000400D0:             ; ;   - displayStartScreen()
-000400D0:             ; ;       Prints the start screen.
-000400D0:             ; ;
-000400D0:             ; ;   - displayPauseScreen()
-000400D0:             ; ;       Prints the pause screen.
-000400D0:             ; ;
-000400D0:             ; ; Notes:
-000400D0:             ; ;   - These routines do not directly control the LCD hardware.
-000400D0:             ; ;   - They rely on ecalls that perform display operations such as clearing the
-000400D0:             ; ;     screen, printing strings, printing characters, and moving to the next line.
-000400D0:             ; ; =============================================================================
-000400D0:             ; 
-000400D0:             ; 
-000400D0:             ; ; =============================================================================
-000400D0:             ; ; printDec
-000400D0:             ; ; =============================================================================
-000400D0:             ; ; Prints an unsigned decimal number.
-000400D0:             ; ; The digits are extracted using repeated division by 10 and temporarily
-000400D0:             ; ; stored on the stack so they can be printed in the correct order.
-000400D0:             ; ;
-000400D0:             ; ; Input:
-000400D0:             ; ;   a0 = integer value to print
-000400D0:             ; ;
-000400D0:             ; ; Registers used:
-000400D0:             ; ;   s0 = working copy of the value
-000400D0:             ; ;   s1 = digit counter
-000400D0:             ; ; =============================================================================
-000400D0:             ; 
-000400D0:             ; printDec
-000400D0: FF410113    ;     subi    sp, sp, 12
-000400D4: 00112423    ;     sw      ra,  8[sp]
-000400D8: 00812223    ;     sw      s0,  4[sp]
-000400DC: 00912023    ;     sw      s1,  0[sp]
-000400E0:             ; 
-000400E0: 00050413    ;     mv      s0, a0          ; s0 = value being printed
-000400E4: 00000493    ;     li      s1, 0           ; s1 = digit counter
+00040020: 31 3A 54 75 ; homeLine2       defb    "1:Tune1 2:Tune2\0"
+00040024: 6E 65 31 20 ; 
+00040028: 32 3A 54 75 ; 
+0004002C: 6E 65 32 00 ; 
+00040030:             ;                 align
+00040030:             ; 
+00040030: 50 6C 61 79 ; playLine1       defb    "Playing...\0"
+00040034: 69 6E 67 2E ; 
+00040038: 2E 2E 00    ; 
+0004003C:             ;                 align
+0004003C:             ; 
+0004003C:             ; user_stack      defs    128
+000400BC:             ; user_stack_base align
+000400BC:             ; 
+000400BC:             ; INCLUDE         UserSpaceLib.s
+000400BC:             ; ; =============================================================================
+000400BC:             ; ; User Space Screen Routines
+000400BC:             ; ; Maria-Ioana Dicu
+000400BC:             ; ; 12 March 2026
+000400BC:             ; ;
+000400BC:             ; ; This file contains helper routines used to print common screens and values
+000400BC:             ; ; through the display-related ecalls.
+000400BC:             ; ;
+000400BC:             ; ; The main purpose of these functions is to keep the main program shorter and
+000400BC:             ; ; avoid repeating the same display-printing sequences multiple times.
+000400BC:             ; ;
+000400BC:             ; ; Functions provided:
+000400BC:             ; ;   - printDec(value)
+000400BC:             ; ;       Prints an unsigned decimal number digit by digit.
+000400BC:             ; ;
+000400BC:             ; ;   - displayTime()
+000400BC:             ; ;       Prints the current timer values using the display ecalls.
+000400BC:             ; ;
+000400BC:             ; ;   - displayStartScreen()
+000400BC:             ; ;       Prints the start screen.
+000400BC:             ; ;
+000400BC:             ; ;   - displayPauseScreen()
+000400BC:             ; ;       Prints the pause screen.
+000400BC:             ; ;
+000400BC:             ; ; Notes:
+000400BC:             ; ;   - These routines do not directly control the LCD hardware.
+000400BC:             ; ;   - They rely on ecalls that perform display operations such as clearing the
+000400BC:             ; ;     screen, printing strings, printing characters, and moving to the next line.
+000400BC:             ; ; =============================================================================
+000400BC:             ; 
+000400BC:             ; 
+000400BC:             ; ; =============================================================================
+000400BC:             ; ; printDec
+000400BC:             ; ; =============================================================================
+000400BC:             ; ; Prints an unsigned decimal number.
+000400BC:             ; ; The digits are extracted using repeated division by 10 and temporarily
+000400BC:             ; ; stored on the stack so they can be printed in the correct order.
+000400BC:             ; ;
+000400BC:             ; ; Input:
+000400BC:             ; ;   a0 = integer value to print
+000400BC:             ; ;
+000400BC:             ; ; Registers used:
+000400BC:             ; ;   s0 = working copy of the value
+000400BC:             ; ;   s1 = digit counter
+000400BC:             ; ; =============================================================================
+000400BC:             ; 
+000400BC:             ; printDec
+000400BC: FF410113    ;     subi    sp, sp, 12
+000400C0: 00112423    ;     sw      ra,  8[sp]
+000400C4: 00812223    ;     sw      s0,  4[sp]
+000400C8: 00912023    ;     sw      s1,  0[sp]
+000400CC:             ; 
+000400CC: 00050413    ;     mv      s0, a0          ; s0 = value being printed
+000400D0: 00000493    ;     li      s1, 0           ; s1 = digit counter
+000400D4:             ; 
+000400D4:             ;     ; -------------------------------------------------------------------------
+000400D4:             ;     ; Special case: value = 0
+000400D4:             ;     ; -------------------------------------------------------------------------
+000400D4:             ; 
+000400D4: 00041A63    ;     bnez    s0, decLoop
+000400D8: 03000513    ;     li      a0, '0'
+000400DC:             ;     ;li      a1, LIGHT | RS
+000400DC:             ; 
+000400DC: 00100893    ;     li      a7, ECALL_PRINT_CHAR
+000400E0: 00000073    ;     ecall 
+000400E4:             ;     
+000400E4: 03C0006F    ;     j       decDone
 000400E8:             ; 
-000400E8:             ;     ; -------------------------------------------------------------------------
-000400E8:             ;     ; Special case: value = 0
-000400E8:             ;     ; -------------------------------------------------------------------------
 000400E8:             ; 
-000400E8: 00041A63    ;     bnez    s0, decLoop
-000400EC: 03000513    ;     li      a0, '0'
-000400F0:             ;     ;li      a1, LIGHT | RS
-000400F0:             ; 
-000400F0: 00100893    ;     li      a7, ECALL_PRINT_CHAR
-000400F4: 00000073    ;     ecall 
-000400F8:             ;     
-000400F8: 03C0006F    ;     j       decDone
-000400FC:             ; 
-000400FC:             ; 
-000400FC:             ; ; -------------------------------------------------------------------------
-000400FC:             ; ; Extract digits and push them onto the stack
-000400FC:             ; ; -------------------------------------------------------------------------
-000400FC:             ; 
-000400FC:             ; decLoop
-000400FC: 00A00313    ;     li      t1, 10
-00040100: 026472B3    ;     remu    t0, s0, t1      ; t0 = s0 % 10
-00040104: 02645433    ;     divu    s0, s0, t1      ; s0 = s0 / 10
-00040108: 03028293    ;     addi    t0, t0, '0'     ; Convert to ASCII digit
-0004010C:             ; 
-0004010C: FFC10113    ;     subi    sp, sp, 4
-00040110: 00512023    ;     sw      t0, 0[sp]       ; push digit onto stack
-00040114: 00148493    ;     addi    s1, s1, 1
-00040118: FE0412E3    ;     bnez    s0, decLoop
-0004011C:             ; 
-0004011C:             ; 
-0004011C:             ; ; -------------------------------------------------------------------------
-0004011C:             ; ; Pop digits and print them
-0004011C:             ; ; -------------------------------------------------------------------------
-0004011C:             ; 
-0004011C:             ; printLoop
-0004011C: 00012503    ;     lw      a0, 0[sp]
-00040120: 00410113    ;     addi    sp, sp, 4
-00040124:             ;     ;li      a1, LIGHT | RS
-00040124:             ; 
-00040124: 00100893    ;     li      a7, ECALL_PRINT_CHAR
-00040128: 00000073    ;     ecall 
-0004012C:             ; 
-0004012C: FFF48493    ;     addi    s1, s1, -1
-00040130: FE0496E3    ;     bnez    s1, printLoop
+000400E8:             ; ; -------------------------------------------------------------------------
+000400E8:             ; ; Extract digits and push them onto the stack
+000400E8:             ; ; -------------------------------------------------------------------------
+000400E8:             ; 
+000400E8:             ; decLoop
+000400E8: 00A00313    ;     li      t1, 10
+000400EC: 026472B3    ;     remu    t0, s0, t1      ; t0 = s0 % 10
+000400F0: 02645433    ;     divu    s0, s0, t1      ; s0 = s0 / 10
+000400F4: 03028293    ;     addi    t0, t0, '0'     ; Convert to ASCII digit
+000400F8:             ; 
+000400F8: FFC10113    ;     subi    sp, sp, 4
+000400FC: 00512023    ;     sw      t0, 0[sp]       ; push digit onto stack
+00040100: 00148493    ;     addi    s1, s1, 1
+00040104: FE0412E3    ;     bnez    s0, decLoop
+00040108:             ; 
+00040108:             ; 
+00040108:             ; ; -------------------------------------------------------------------------
+00040108:             ; ; Pop digits and print them
+00040108:             ; ; -------------------------------------------------------------------------
+00040108:             ; 
+00040108:             ; printLoop
+00040108: 00012503    ;     lw      a0, 0[sp]
+0004010C: 00410113    ;     addi    sp, sp, 4
+00040110:             ;     ;li      a1, LIGHT | RS
+00040110:             ; 
+00040110: 00100893    ;     li      a7, ECALL_PRINT_CHAR
+00040114: 00000073    ;     ecall 
+00040118:             ; 
+00040118: FFF48493    ;     addi    s1, s1, -1
+0004011C: FE0496E3    ;     bnez    s1, printLoop
+00040120:             ; 
+00040120:             ; decDone
+00040120: 00012483    ;     lw      s1,  0[sp]
+00040124: 00412403    ;     lw      s0,  4[sp]
+00040128: 00812083    ;     lw      ra,  8[sp]
+0004012C: 00C10113    ;     addi    sp, sp, 12
+00040130: 00008067    ;     ret
 00040134:             ; 
-00040134:             ; decDone
-00040134: 00012483    ;     lw      s1,  0[sp]
-00040138: 00412403    ;     lw      s0,  4[sp]
-0004013C: 00812083    ;     lw      ra,  8[sp]
-00040140: 00C10113    ;     addi    sp, sp, 12
-00040144: 00008067    ;     ret
-00040148:             ; 
-00040148:             ; 
-00040148:             ; ; =============================================================================
-00040148:             ; ; Music Player Virtual Machine (Interpreter)
-00040148:             ; ; =============================================================================
-00040148:             ; 
-00040148:             ; START
-00040148:             ; menu_start
-00040148:             ;     ; Show homescreen and wait for keypad selection
-00040148: 00000893    ;     li      a7, ECALL_CLEAR_DISPLAY
-0004014C: 00000073    ;     ecall
-00040150: 00000517    ;     la      a0, homeLine1
-00040154: ED450513    ; 
-00040158: 00200893    ;     li      a7, ECALL_PRINT_STRING
-0004015C: 00000073    ;     ecall
-00040160: 00300893    ;     li      a7, ECALL_NEXT_LINE
-00040164: 00000073    ;     ecall
-00040168: 00000517    ;     la      a0, homeLine2
-0004016C: ECC50513    ; 
-00040170: 00200893    ;     li      a7, ECALL_PRINT_STRING
-00040174: 00000073    ;     ecall
-00040178:             ; 
-00040178:             ; wait_for_key
-00040178: 00400893    ;     li      a7, ECALL_GET_KEY
-0004017C: 00000073    ;     ecall
-00040180: FE050CE3    ;     beqz    a0, wait_for_key
+00040134:             ; 
+00040134:             ; ; =============================================================================
+00040134:             ; ; Music Player Virtual Machine (Interpreter)
+00040134:             ; ; =============================================================================
+00040134:             ; 
+00040134:             ; START
+00040134:             ; menu_start
+00040134:             ;     ; Show homescreen and wait for keypad selection
+00040134: 00000893    ;     li      a7, ECALL_CLEAR_DISPLAY
+00040138: 00000073    ;     ecall
+0004013C: 00000517    ;     la      a0, homeLine1
+00040140: ED450513    ; 
+00040144: 00200893    ;     li      a7, ECALL_PRINT_STRING
+00040148: 00000073    ;     ecall
+0004014C: 00300893    ;     li      a7, ECALL_NEXT_LINE
+00040150: 00000073    ;     ecall
+00040154: 00000517    ;     la      a0, homeLine2
+00040158: ECC50513    ; 
+0004015C: 00200893    ;     li      a7, ECALL_PRINT_STRING
+00040160: 00000073    ;     ecall
+00040164:             ; 
+00040164:             ; wait_for_key
+00040164: 00400893    ;     li      a7, ECALL_GET_KEY
+00040168: 00000073    ;     ecall
+0004016C: FE050CE3    ;     beqz    a0, wait_for_key
+00040170:             ; 
+00040170: 03100293    ;     li      t0, '1'
+00040174: 00550863    ;     beq     a0, t0, select_song1
+00040178: 03200293    ;     li      t0, '2'
+0004017C: 00550A63    ;     beq     a0, t0, select_song2
+00040180: FB5FF06F    ;     j       menu_start
 00040184:             ; 
-00040184: 03100293    ;     li      t0, '1'
-00040188: 00550863    ;     beq     a0, t0, select_song1
-0004018C: 03200293    ;     li      t0, '2'
-00040190: 00550A63    ;     beq     a0, t0, select_song2
-00040194: FB5FF06F    ;     j       menu_start
+00040184:             ; select_song1
+00040184: 00000417    ;     la      s0, tune1
+00040188: 15040413    ; 
+0004018C: 00C0006F    ;     j       start_play
+00040190:             ; 
+00040190:             ; select_song2
+00040190: 00000417    ;     la      s0, tune2
+00040194: 16A40413    ; 
 00040198:             ; 
-00040198:             ; select_song1
-00040198: 00000417    ;     la      s0, tune1
-0004019C: 15040413    ; 
-000401A0: 00C0006F    ;     j       start_play
-000401A4:             ; 
-000401A4:             ; select_song2
-000401A4: 00000417    ;     la      s0, tune2
-000401A8: 16A40413    ; 
-000401AC:             ; 
-000401AC:             ; start_play
-000401AC: 000204B7    ;     li      s1, BUZZER_BASE     ; s1 = memory address of our Verilog Buzzer
-000401B0:             ;     ; Show playing line
-000401B0: 00000893    ;     li      a7, ECALL_CLEAR_DISPLAY
-000401B4: 00000073    ;     ecall
-000401B8: 00000517    ;     la      a0, playLine1
-000401BC: E8C50513    ; 
-000401C0: 00200893    ;     li      a7, ECALL_PRINT_STRING
-000401C4: 00000073    ;     ecall
-000401C8:             ; 
-000401C8:             ; play_loop
-000401C8:             ;     ; 2. Fetch Pitch (Byte 0) and Duration (Byte 1)
-000401C8: 00044283    ;     lbu     t0, 0[s0]           
-000401CC:             ;     
-000401CC:             ;     ; 3. Check for End of Tune (0xFF / 255)
-000401CC: 0FF00E13    ;     li      t3, 255
-000401D0: 07C28E63    ;     beq     t0, t3, end_song
-000401D4:             ; 
-000401D4:             ;     ; 4. Fetch Duration and convert to milliseconds
-000401D4: 00144383    ;     lbu     t2, 1[s0]           
-000401D8: 06400E13    ;     li      t3, 100
-000401DC: 03C383B3    ;     mul     t2, t2, t3          
-000401E0:             ; 
-000401E0:             ;     ; 5. Check for Rest (Pitch 0)
-000401E0: 02028663    ;     beqz    t0, play_rest
-000401E4:             ; 
-000401E4:             ;     ; 6. Look up the base period from the LUT
-000401E4: FFF28293    ;     addi    t0, t0, -1          
-000401E8: 00229293    ;     slli    t0, t0, 2           
-000401EC:             ;     
-000401EC: 00000E97    ;     la      t4, note_lut        
-000401F0: 0C0E8E93    ; 
-000401F4: 005E8EB3    ;     add     t4, t4, t0          
-000401F8: 000EAF83    ;     lw      t6, 0[t4]           
-000401FC:             ; 
-000401FC:             ;     ; 7. Send to Hardware (via ECALL instead of direct store)
-000401FC: 000F8513    ;     mv      a0, t6              ; Put half-period in a0
-00040200: 00500893    ;     li      a7, ECALL_PLAY_NOTE ; Call OS to write to hardware
-00040204: 00000073    ;     ecall
-00040208: 0100006F    ;     j       wait_duration
+00040198:             ; start_play
+00040198: 000204B7    ;     li      s1, BUZZER_BASE     ; s1 = memory address of our Verilog Buzzer
+0004019C:             ;     ; Show playing line
+0004019C: 00000893    ;     li      a7, ECALL_CLEAR_DISPLAY
+000401A0: 00000073    ;     ecall
+000401A4: 00000517    ;     la      a0, playLine1
+000401A8: E8C50513    ; 
+000401AC: 00200893    ;     li      a7, ECALL_PRINT_STRING
+000401B0: 00000073    ;     ecall
+000401B4:             ; 
+000401B4:             ; play_loop
+000401B4:             ;     ; 2. Fetch Pitch (Byte 0) and Duration (Byte 1)
+000401B4: 00044283    ;     lbu     t0, 0[s0]           
+000401B8:             ;     
+000401B8:             ;     ; 3. Check for End of Tune (0xFF / 255)
+000401B8: 0FF00E13    ;     li      t3, 255
+000401BC: 07C28E63    ;     beq     t0, t3, end_song
+000401C0:             ; 
+000401C0:             ;     ; 4. Fetch Duration and convert to milliseconds
+000401C0: 00144383    ;     lbu     t2, 1[s0]           
+000401C4: 06400E13    ;     li      t3, 100
+000401C8: 03C383B3    ;     mul     t2, t2, t3          
+000401CC:             ; 
+000401CC:             ;     ; 5. Check for Rest (Pitch 0)
+000401CC: 02028663    ;     beqz    t0, play_rest
+000401D0:             ; 
+000401D0:             ;     ; 6. Look up the base period from the LUT
+000401D0: FFF28293    ;     addi    t0, t0, -1          
+000401D4: 00229293    ;     slli    t0, t0, 2           
+000401D8:             ;     
+000401D8: 00000E97    ;     la      t4, note_lut        
+000401DC: 0C0E8E93    ; 
+000401E0: 005E8EB3    ;     add     t4, t4, t0          
+000401E4: 000EAF83    ;     lw      t6, 0[t4]           
+000401E8:             ; 
+000401E8:             ;     ; 7. Send to Hardware (via ECALL instead of direct store)
+000401E8: 000F8513    ;     mv      a0, t6              ; Put half-period in a0
+000401EC: 00500893    ;     li      a7, ECALL_PLAY_NOTE ; Call OS to write to hardware
+000401F0: 00000073    ;     ecall
+000401F4: 0100006F    ;     j       wait_duration
+000401F8:             ; 
+000401F8:             ; play_rest
+000401F8: 00000513    ;     li      a0, 0               ; Period 0 = Silence
+000401FC: 00500893    ;     li      a7, ECALL_PLAY_NOTE
+00040200: 00000073    ;     ecall
+00040204:             ; 
+00040204:             ; wait_duration
+00040204:             ;     ; 8. Delay for the note's duration
+00040204: 00038513    ;     mv      a0, t2              ; Pass duration (ms) to delay function
+00040208: 040000EF    ;     call    delay_ms
 0004020C:             ; 
-0004020C:             ; play_rest
-0004020C: 00000513    ;     li      a0, 0               ; Period 0 = Silence
-00040210: 00500893    ;     li      a7, ECALL_PLAY_NOTE
-00040214: 00000073    ;     ecall
-00040218:             ; 
-00040218:             ; wait_duration
-00040218:             ;     ; 8. Delay for the note's duration
-00040218: 00038513    ;     mv      a0, t2              ; Pass duration (ms) to delay function
-0004021C: 040000EF    ;     call    delay_ms
-00040220:             ; 
-00040220:             ;     ; If delay aborted, return to menu
-00040220: 0FF00293    ;     li      t0, 0xFF
-00040224: F25502E3    ;     beq     a0, t0, menu_start
+0004020C:             ;     ; If delay aborted, return to menu
+0004020C: 0FF00293    ;     li      t0, 0xFF
+00040210: F25502E3    ;     beq     a0, t0, menu_start
+00040214:             ; 
+00040214:             ;     ; 9. Note Separator (Tiny gap of silence)
+00040214: 00000513    ;     li      a0, 0
+00040218: 00500893    ;     li      a7, ECALL_PLAY_NOTE
+0004021C: 00000073    ;     ecall
+00040220:             ;     
+00040220: 00F00513    ;     li      a0, 15              ; 15 ms articulation gap
+00040224: 024000EF    ;     call    delay_ms
 00040228:             ; 
-00040228:             ;     ; 9. Note Separator (Tiny gap of silence)
-00040228: 00000513    ;     li      a0, 0
-0004022C: 00500893    ;     li      a7, ECALL_PLAY_NOTE
-00040230: 00000073    ;     ecall
-00040234:             ;     
-00040234: 00F00513    ;     li      a0, 15              ; 15 ms articulation gap
-00040238: 024000EF    ;     call    delay_ms
-0004023C:             ; 
-0004023C: 0FF00293    ;     li      t0, 0xFF
-00040240: F05504E3    ;     beq     a0, t0, menu_start
-00040244:             ; 
-00040244:             ;     ; 10. Move pointer to next note pair and loop
-00040244: 00240413    ;     addi    s0, s0, 2           
-00040248: F81FF06F    ;     j       play_loop
+00040228: 0FF00293    ;     li      t0, 0xFF
+0004022C: F05504E3    ;     beq     a0, t0, menu_start
+00040230:             ; 
+00040230:             ;     ; 10. Move pointer to next note pair and loop
+00040230: 00240413    ;     addi    s0, s0, 2           
+00040234: F81FF06F    ;     j       play_loop
+00040238:             ; 
+00040238:             ; end_song
+00040238: 00000513    ;     li      a0, 0               ; Ensure buzzer is off at the end
+0004023C: 00500893    ;     li      a7, ECALL_PLAY_NOTE
+00040240: 00000073    ;     ecall
+00040244: EF1FF06F    ;     j       menu_start          ; Return to homescreen after the song ends
+00040248:             ; 
+00040248:             ; ; =============================================================================
+00040248:             ; ; Helper: Delay in Milliseconds
+00040248:             ; ; =============================================================================
+00040248:             ; ; Input: a0 = milliseconds to delay
+00040248:             ; delay_ms
+00040248: 02050A63    ;     beqz    a0, delay_done
 0004024C:             ; 
-0004024C:             ; end_song
-0004024C: 00000513    ;     li      a0, 0               ; Ensure buzzer is off at the end
-00040250: 00500893    ;     li      a7, ECALL_PLAY_NOTE
-00040254: 00000073    ;     ecall
-00040258: EF1FF06F    ;     j       menu_start          ; Return to homescreen after the song ends
+0004024C: 00050E13    ;     mv      t3, a0              ; t3 = remaining ms counter (preserve across ecalls)
+00040250:             ; 
+00040250:             ; delay_ms_loop
+00040250: 00000297    ;     la      t0, timer_ticks
+00040254: DBC28293    ; 
+00040258: 0002A303    ;     lw      t1, [t0]            ; Snapshot the current 1 ms tick
 0004025C:             ; 
-0004025C:             ; ; =============================================================================
-0004025C:             ; ; Helper: Delay in Milliseconds
-0004025C:             ; ; =============================================================================
-0004025C:             ; ; Input: a0 = milliseconds to delay
-0004025C:             ; delay_ms
-0004025C: 02050A63    ;     beqz    a0, delay_done
-00040260:             ; 
-00040260: 00050E13    ;     mv      t3, a0              ; t3 = remaining ms counter (preserve across ecalls)
-00040264:             ; 
-00040264:             ; delay_ms_loop
-00040264: 00000297    ;     la      t0, timer_ticks
-00040268: DBC28293    ; 
-0004026C: 0002A303    ;     lw      t1, [t0]            ; Snapshot the current 1 ms tick
-00040270:             ; 
-00040270:             ; wait_tick
-00040270: 0002A383    ;     lw      t2, [t0]
-00040274: FE638EE3    ;     beq     t2, t1, wait_tick   ; Wait for the next timer interrupt
-00040278:             ;     ; Also poll SW1 during each ms to allow stopping playback
-00040278: 00600893    ;     li      a7, ECALL_READ_BUTTONS
-0004027C: 00000073    ;     ecall
-00040280: 00157513    ;     andi    a0, a0, BTTN1
-00040284: 00051A63    ;     bnez    a0, delay_abort
-00040288:             ; 
-00040288: FFFE0E13    ;     subi    t3, t3, 1
-0004028C: FC0E1CE3    ;     bnez    t3, delay_ms_loop
+0004025C:             ; wait_tick
+0004025C: 0002A383    ;     lw      t2, [t0]
+00040260: FE638EE3    ;     beq     t2, t1, wait_tick   ; Wait for the next timer interrupt
+00040264:             ;     ; Also poll SW1 during each ms to allow stopping playback
+00040264: 00600893    ;     li      a7, ECALL_READ_BUTTONS
+00040268: 00000073    ;     ecall
+0004026C: 00157513    ;     andi    a0, a0, BTTN1
+00040270: 00051A63    ;     bnez    a0, delay_abort
+00040274:             ; 
+00040274: FFFE0E13    ;     subi    t3, t3, 1
+00040278: FC0E1CE3    ;     bnez    t3, delay_ms_loop
+0004027C:             ; 
+0004027C:             ; delay_done
+0004027C: 00000513    ;     li      a0, 0               ; Normal return value 0
+00040280: 00008067    ;     ret
+00040284:             ; 
+00040284:             ; delay_abort
+00040284: 00000513    ;     li      a0, 0               ; Silence buzzer immediately on stop
+00040288: 00500893    ;     li      a7, ECALL_PLAY_NOTE
+0004028C: 00000073    ;     ecall
 00040290:             ; 
-00040290:             ; delay_done
-00040290: 00000513    ;     li      a0, 0               ; Normal return value 0
+00040290: 0FF00513    ;     li      a0, 0xFF            ; signal abort
 00040294: 00008067    ;     ret
 00040298:             ; 
-00040298:             ; delay_abort
-00040298: 00000513    ;     li      a0, 0               ; Silence buzzer immediately on stop
-0004029C: 00500893    ;     li      a7, ECALL_PLAY_NOTE
-000402A0: 00000073    ;     ecall
-000402A4:             ; 
-000402A4: 0FF00513    ;     li      a0, 0xFF            ; signal abort
-000402A8: 00008067    ;     ret
-000402AC:             ; 
-000402AC:             ; 
-000402AC:             ; ; =============================================================================
-000402AC:             ; ; Look-Up Table (LUT): 1-based Major Scale Half-Periods
-000402AC:             ; ; =============================================================================
-000402AC:             ; ; Calculated for 40MHz clock. Middle C (Pitch 1) is ~1046 Hz for better piezo volume.
-000402AC:             ; ; Pitch 8 is exactly half the period of Pitch 1 (one octave up).
-000402AC:             ; note_lut
-000402AC: 00004AA7    ;     defw   19111   ; Pitch 1  (C)
-000402B0: 00004282    ;     defw   17026   ; Pitch 2  (D)
-000402B4: 00003B41    ;     defw   15169   ; Pitch 3  (E)
-000402B8: 000037ED    ;     defw   14317   ; Pitch 4  (F)
-000402BC: 000031D3    ;     defw   12755   ; Pitch 5  (G)
-000402C0: 00002C64    ;     defw   11364   ; Pitch 6  (A)
-000402C4: 0000278C    ;     defw   10124   ; Pitch 7  (B)
-000402C8:             ;     
-000402C8: 00002553    ;     defw   9555    ; Pitch 8  (High C)
-000402CC: 00002141    ;     defw   8513    ; Pitch 9  (High D)
-000402D0: 00001DA0    ;     defw   7584    ; Pitch 10 (High E)
-000402D4: 00001BF6    ;     defw   7158    ; Pitch 11 (High F)
-000402D8: 000018E9    ;     defw   6377    ; Pitch 12 (High G)
-000402DC: 00001632    ;     defw   5682    ; Pitch 13 (High A)
-000402E0: 000013C6    ;     defw   5062    ; Pitch 14 (High B)
-000402E4:             ;     
-000402E4: 000012A9    ;     defw   4777    ; Pitch 15 (Higher C)
-000402E8:             ; 
-000402E8:             ; 
-000402E8:             ; INCLUDE tune1.s
-000402E8:             ; tune1           
-000402E8: 08 07       ;     defb      8, 7
-000402EA: 00 01       ;     defb      0, 1
-000402EC: 08 08       ;     defb      8, 8
-000402EE: 09 08       ;     defb      9, 8
-000402F0: 07 0C       ;     defb      7, 12
-000402F2: 08 04       ;     defb      8, 4
-000402F4: 09 08       ;     defb      9, 8
-000402F6:             ; 
-000402F6: 0A 07       ;     defb     10, 7
-000402F8: 00 01       ;     defb      0, 1
-000402FA: 0A 08       ;     defb     10, 8
-000402FC: 0B 08       ;     defb     11, 8
-000402FE: 0A 0C       ;     defb     10, 12
-00040300: 09 04       ;     defb      9, 4
-00040302: 08 08       ;     defb      8, 8
-00040304:             ; 
-00040304: 09 08       ;     defb      9, 8
-00040306: 08 08       ;     defb      8, 8
-00040308: 07 08       ;     defb      7, 8
-0004030A: 08 10       ;     defb      8, 16
-0004030C:             ; 
-0004030C: FF 00       ;     defb    255, 0    ; 0xFF (255) means End of File!
-0004030E:             ; 
-0004030E:             ; INCLUDE tune2.s
-0004030E:             ; tune2
-0004030E: 08 02       ;     defb     8, 2
-00040310: 0A 02       ;     defb    10, 2
+00040298:             ; 
+00040298:             ; ; =============================================================================
+00040298:             ; ; Look-Up Table (LUT): 1-based Major Scale Half-Periods
+00040298:             ; ; =============================================================================
+00040298:             ; ; Calculated for 40MHz clock. Middle C (Pitch 1) is ~1046 Hz for better piezo volume.
+00040298:             ; ; Pitch 8 is exactly half the period of Pitch 1 (one octave up).
+00040298:             ; note_lut
+00040298: 00004AA7    ;     defw   19111   ; Pitch 1  (C)
+0004029C: 00004282    ;     defw   17026   ; Pitch 2  (D)
+000402A0: 00003B41    ;     defw   15169   ; Pitch 3  (E)
+000402A4: 000037ED    ;     defw   14317   ; Pitch 4  (F)
+000402A8: 000031D3    ;     defw   12755   ; Pitch 5  (G)
+000402AC: 00002C64    ;     defw   11364   ; Pitch 6  (A)
+000402B0: 0000278C    ;     defw   10124   ; Pitch 7  (B)
+000402B4:             ;     
+000402B4: 00002553    ;     defw   9555    ; Pitch 8  (High C)
+000402B8: 00002141    ;     defw   8513    ; Pitch 9  (High D)
+000402BC: 00001DA0    ;     defw   7584    ; Pitch 10 (High E)
+000402C0: 00001BF6    ;     defw   7158    ; Pitch 11 (High F)
+000402C4: 000018E9    ;     defw   6377    ; Pitch 12 (High G)
+000402C8: 00001632    ;     defw   5682    ; Pitch 13 (High A)
+000402CC: 000013C6    ;     defw   5062    ; Pitch 14 (High B)
+000402D0:             ;     
+000402D0: 000012A9    ;     defw   4777    ; Pitch 15 (Higher C)
+000402D4:             ; 
+000402D4:             ; 
+000402D4:             ; INCLUDE tune1.s
+000402D4:             ; tune1           
+000402D4: 08 07       ;     defb      8, 7
+000402D6: 00 01       ;     defb      0, 1
+000402D8: 08 08       ;     defb      8, 8
+000402DA: 09 08       ;     defb      9, 8
+000402DC: 07 0C       ;     defb      7, 12
+000402DE: 08 04       ;     defb      8, 4
+000402E0: 09 08       ;     defb      9, 8
+000402E2:             ; 
+000402E2: 0A 07       ;     defb     10, 7
+000402E4: 00 01       ;     defb      0, 1
+000402E6: 0A 08       ;     defb     10, 8
+000402E8: 0B 08       ;     defb     11, 8
+000402EA: 0A 0C       ;     defb     10, 12
+000402EC: 09 04       ;     defb      9, 4
+000402EE: 08 08       ;     defb      8, 8
+000402F0:             ; 
+000402F0: 09 08       ;     defb      9, 8
+000402F2: 08 08       ;     defb      8, 8
+000402F4: 07 08       ;     defb      7, 8
+000402F6: 08 10       ;     defb      8, 16
+000402F8:             ; 
+000402F8: FF 00       ;     defb    255, 0    ; 0xFF (255) means End of File!
+000402FA:             ; 
+000402FA:             ; INCLUDE tune2.s
+000402FA:             ; tune2
+000402FA: 08 02       ;     defb     8, 2
+000402FC: 0A 02       ;     defb    10, 2
+000402FE: 0C 02       ;     defb    12, 2
+00040300: 0F 02       ;     defb    15, 2
+00040302: 0C 02       ;     defb    12, 2
+00040304: 0A 02       ;     defb    10, 2
+00040306: 08 02       ;     defb     8, 2
+00040308: 09 02       ;     defb     9, 2
+0004030A: 0A 02       ;     defb    10, 2
+0004030C: 0B 02       ;     defb    11, 2
+0004030E: 0C 02       ;     defb    12, 2
+00040310: 0D 02       ;     defb    13, 2
 00040312: 0C 02       ;     defb    12, 2
-00040314: 0F 02       ;     defb    15, 2
-00040316: 0C 02       ;     defb    12, 2
-00040318: 0A 02       ;     defb    10, 2
-0004031A: 08 02       ;     defb     8, 2
-0004031C: 09 02       ;     defb     9, 2
-0004031E: 0A 02       ;     defb    10, 2
-00040320: 0B 02       ;     defb    11, 2
-00040322: 0C 02       ;     defb    12, 2
-00040324: 0D 02       ;     defb    13, 2
-00040326: 0C 02       ;     defb    12, 2
-00040328: 0B 02       ;     defb    11, 2
-0004032A: 0A 02       ;     defb    10, 2
-0004032C: 09 02       ;     defb     9, 2
-0004032E: 0A 02       ;     defb    10, 2
-00040330: 08 02       ;     defb     8, 2
-00040332: 07 02       ;     defb     7, 2
-00040334: 08 02       ;     defb     8, 2
-00040336: 09 02       ;     defb     9, 2
-00040338:             ;     
-00040338: 05 02       ;     defb     5, 2
-0004033A: 07 02       ;     defb     7, 2
-0004033C: 09 02       ;     defb     9, 2
-0004033E: 0B 02       ;     defb    11, 2
-00040340: 0A 02       ;     defb    10, 2
-00040342: 09 02       ;     defb     9, 2
-00040344: 0A 02       ;     defb    10, 2
-00040346: 08 02       ;     defb     8, 2
-00040348: 09 02       ;     defb     9, 2
-0004034A: 0A 02       ;     defb    10, 2
-0004034C: 0C 02       ;     defb    12, 2
-0004034E: 0B 02       ;     defb    11, 2
-00040350: 0B 02       ;     defb    11, 2
-00040352: 0D 02       ;     defb    13, 2
-00040354: 0C 02       ;     defb    12, 2
-00040356: 0C 02       ;     defb    12, 2
-00040358: 0F 02       ;     defb    15, 2
-0004035A: 0E 02       ;     defb    14, 2
-0004035C: 0F 02       ;     defb    15, 2
-0004035E: 0C 02       ;     defb    12, 2
+00040314: 0B 02       ;     defb    11, 2
+00040316: 0A 02       ;     defb    10, 2
+00040318: 09 02       ;     defb     9, 2
+0004031A: 0A 02       ;     defb    10, 2
+0004031C: 08 02       ;     defb     8, 2
+0004031E: 07 02       ;     defb     7, 2
+00040320: 08 02       ;     defb     8, 2
+00040322: 09 02       ;     defb     9, 2
+00040324:             ;     
+00040324: 05 02       ;     defb     5, 2
+00040326: 07 02       ;     defb     7, 2
+00040328: 09 02       ;     defb     9, 2
+0004032A: 0B 02       ;     defb    11, 2
+0004032C: 0A 02       ;     defb    10, 2
+0004032E: 09 02       ;     defb     9, 2
+00040330: 0A 02       ;     defb    10, 2
+00040332: 08 02       ;     defb     8, 2
+00040334: 09 02       ;     defb     9, 2
+00040336: 0A 02       ;     defb    10, 2
+00040338: 0C 02       ;     defb    12, 2
+0004033A: 0B 02       ;     defb    11, 2
+0004033C: 0B 02       ;     defb    11, 2
+0004033E: 0D 02       ;     defb    13, 2
+00040340: 0C 02       ;     defb    12, 2
+00040342: 0C 02       ;     defb    12, 2
+00040344: 0F 02       ;     defb    15, 2
+00040346: 0E 02       ;     defb    14, 2
+00040348: 0F 02       ;     defb    15, 2
+0004034A: 0C 02       ;     defb    12, 2
+0004034C: 0A 02       ;     defb    10, 2
+0004034E: 08 02       ;     defb     8, 2
+00040350: 09 02       ;     defb     9, 2
+00040352: 0A 02       ;     defb    10, 2
+00040354:             ; 
+00040354: 05 02       ;     defb     5, 2
+00040356: 07 02       ;     defb     7, 2
+00040358: 09 02       ;     defb     9, 2
+0004035A: 0B 02       ;     defb    11, 2
+0004035C: 0A 02       ;     defb    10, 2
+0004035E: 09 02       ;     defb     9, 2
 00040360: 0A 02       ;     defb    10, 2
 00040362: 08 02       ;     defb     8, 2
 00040364: 09 02       ;     defb     9, 2
 00040366: 0A 02       ;     defb    10, 2
-00040368:             ; 
-00040368: 05 02       ;     defb     5, 2
-0004036A: 07 02       ;     defb     7, 2
-0004036C: 09 02       ;     defb     9, 2
-0004036E: 0B 02       ;     defb    11, 2
-00040370: 0A 02       ;     defb    10, 2
-00040372: 09 02       ;     defb     9, 2
-00040374: 0A 02       ;     defb    10, 2
-00040376: 08 02       ;     defb     8, 2
-00040378: 09 02       ;     defb     9, 2
-0004037A: 0A 02       ;     defb    10, 2
-0004037C: 0C 02       ;     defb    12, 2
-0004037E: 0B 02       ;     defb    11, 2
-00040380: 0B 02       ;     defb    11, 2
-00040382: 0D 02       ;     defb    13, 2
-00040384: 0C 02       ;     defb    12, 2
-00040386: 0C 02       ;     defb    12, 2
-00040388: 0F 02       ;     defb    15, 2
-0004038A: 0E 02       ;     defb    14, 2
-0004038C: 0F 02       ;     defb    15, 2
-0004038E: 0C 02       ;     defb    12, 2
-00040390: 0A 02       ;     defb    10, 2
-00040392: 08 02       ;     defb     8, 2
-00040394: 09 02       ;     defb     9, 2
-00040396: 0A 02       ;     defb    10, 2
-00040398:             ;                                                                
-00040398: 09 02       ;     defb     9, 2                                                   
-0004039A: 0D 02       ;     defb    13, 2                                                   
-0004039C: 0C 02       ;     defb    12, 2                                                   
-0004039E: 0B 02       ;     defb    11, 2                                                   
-000403A0: 0A 02       ;     defb    10, 2                                                   
-000403A2: 09 02       ;     defb     9, 2                                                   
-000403A4: 05 02       ;     defb     5, 2                                                   
-000403A6: 08 02       ;     defb     8, 2                                                   
-000403A8: 07 02       ;     defb     7, 2                                                   
-000403AA: 08 06       ;     defb     8, 6                                                   
-000403AC:             ;                                                                 
-000403AC: FF 00       ;     defb    255, 0    ; 0xFF (255) means End of File!
+00040368: 0C 02       ;     defb    12, 2
+0004036A: 0B 02       ;     defb    11, 2
+0004036C: 0B 02       ;     defb    11, 2
+0004036E: 0D 02       ;     defb    13, 2
+00040370: 0C 02       ;     defb    12, 2
+00040372: 0C 02       ;     defb    12, 2
+00040374: 0F 02       ;     defb    15, 2
+00040376: 0E 02       ;     defb    14, 2
+00040378: 0F 02       ;     defb    15, 2
+0004037A: 0C 02       ;     defb    12, 2
+0004037C: 0A 02       ;     defb    10, 2
+0004037E: 08 02       ;     defb     8, 2
+00040380: 09 02       ;     defb     9, 2
+00040382: 0A 02       ;     defb    10, 2
+00040384:             ;                                                                
+00040384: 09 02       ;     defb     9, 2                                                   
+00040386: 0D 02       ;     defb    13, 2                                                   
+00040388: 0C 02       ;     defb    12, 2                                                   
+0004038A: 0B 02       ;     defb    11, 2                                                   
+0004038C: 0A 02       ;     defb    10, 2                                                   
+0004038E: 09 02       ;     defb     9, 2                                                   
+00040390: 05 02       ;     defb     5, 2                                                   
+00040392: 08 02       ;     defb     8, 2                                                   
+00040394: 07 02       ;     defb     7, 2                                                   
+00040396: 08 06       ;     defb     8, 6                                                   
+00040398:             ;                                                                 
+00040398: FF 00       ;     defb    255, 0    ; 0xFF (255) means End of File!
 
 Symbol Table: Labels
 : bit0                              00000001  Value
@@ -1737,32 +1730,31 @@ Symbol Table: Labels
 : mstack                            0000063C  Label
 : mstack_base                       0000073C  Label
 : user_code                         00040000  Label
-: msg1                              0004000C  Label
-: timer_ticks                       00040020  Label
-: homeLine1                         00040024  Label
-: homeLine2                         00040034  Label
-: playLine1                         00040044  Label
-: user_stack                        00040050  Label
-: user_stack_base                   000400D0  Label
-: printDec                          000400D0  Label
-: decLoop                           000400FC  Label
-: printLoop                         0004011C  Label
-: decDone                           00040134  Label
-: START                             00040148  Label
-: menu_start                        00040148  Label
-: wait_for_key                      00040178  Label
-: select_song1                      00040198  Label
-: select_song2                      000401A4  Label
-: start_play                        000401AC  Label
-: play_loop                         000401C8  Label
-: play_rest                         0004020C  Label
-: wait_duration                     00040218  Label
-: end_song                          0004024C  Label
-: delay_ms                          0004025C  Label
-: delay_ms_loop                     00040264  Label
-: wait_tick                         00040270  Label
-: delay_done                        00040290  Label
-: delay_abort                       00040298  Label
-: note_lut                          000402AC  Label
-: tune1                             000402E8  Label
-: tune2                             0004030E  Label
+: timer_ticks                       0004000C  Label
+: homeLine1                         00040010  Label
+: homeLine2                         00040020  Label
+: playLine1                         00040030  Label
+: user_stack                        0004003C  Label
+: user_stack_base                   000400BC  Label
+: printDec                          000400BC  Label
+: decLoop                           000400E8  Label
+: printLoop                         00040108  Label
+: decDone                           00040120  Label
+: START                             00040134  Label
+: menu_start                        00040134  Label
+: wait_for_key                      00040164  Label
+: select_song1                      00040184  Label
+: select_song2                      00040190  Label
+: start_play                        00040198  Label
+: play_loop                         000401B4  Label
+: play_rest                         000401F8  Label
+: wait_duration                     00040204  Label
+: end_song                          00040238  Label
+: delay_ms                          00040248  Label
+: delay_ms_loop                     00040250  Label
+: wait_tick                         0004025C  Label
+: delay_done                        0004027C  Label
+: delay_abort                       00040284  Label
+: note_lut                          00040298  Label
+: tune1                             000402D4  Label
+: tune2                             000402FA  Label
