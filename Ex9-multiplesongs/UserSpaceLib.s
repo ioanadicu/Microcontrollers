@@ -12,16 +12,6 @@
 ; Functions provided:
 ;   - printDec(value)
 ;       Prints an unsigned decimal number digit by digit.
-;
-;   - displayTime()
-;       Prints the current timer values using the display ecalls.
-;
-;   - displayStartScreen()
-;       Prints the start screen.
-;
-;   - displayPauseScreen()
-;       Prints the pause screen.
-;
 ; =============================================================================
 
 
